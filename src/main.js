@@ -4,6 +4,7 @@ import App from './App.vue';
 import router from './routes/router';
 import Vue3Toastify from 'vue3-toastify';
 import pinia from './plugins/pinia';
+import Landing from './modules/Landing';
 
 const app = createApp(App);
 
@@ -28,6 +29,12 @@ app.use(Vue3Toastify, {
 });
 
 app.use(pinia);
+
+const options = {
+    router,
+};
+
+app.use(Landing, options);
 
 
 

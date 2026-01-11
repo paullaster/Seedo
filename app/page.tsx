@@ -1,66 +1,81 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+'use client';
+import React from 'react';
+import { Box, Typography, Card, CardActionArea, CardContent, Container, Grid2 as Grid, useTheme } from '@mui/material';
+import { useRouter } from 'next/navigation';
+import AgricultureIcon from '@mui/icons-material/Agriculture';
+import LocalShippingIcon from '@mui/icons-material/LocalShipping';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 
 export default function Home() {
+  const router = useRouter();
+  const theme = useTheme();
+
+  const modules = [
+    {
+      title: 'Farmer',
+      description: 'Manage produce & account',
+      icon: <AgricultureIcon fontSize="large" />,
+      color: theme.palette.primary.main,
+      path: '/farmer',
+    },
+    {
+      title: 'Agent',
+      description: 'Collection & Workflow',
+      icon: <LocalShippingIcon fontSize="large" />,
+      color: theme.palette.secondary.main,
+      path: '/agent',
+    },
+    {
+      title: 'Admin',
+      description: 'Management & Analytics',
+      icon: <AdminPanelSettingsIcon fontSize="large" />,
+      color: theme.palette.info.main,
+      path: '/admin',
+    },
+  ];
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
+    <Container maxWidth="md" sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', py: 4 }}>
+      <Box sx={{ textAlign: 'center', mb: 6 }}>
+        <Typography variant="h3" component="h1" fontWeight="700" color="primary" gutterBottom>
+          AgriCollect
+        </Typography>
+        <Typography variant="h6" color="text.secondary">
+          Select your role to continue
+        </Typography>
+      </Box>
+
+      <Grid container spacing={3} justifyContent="center">
+        {modules.map((module) => (
+          <Grid size={{ xs: 12, sm: 6, md: 4 }} key={module.title}>
+            <Card 
+              elevation={3} 
+              sx={{ 
+                height: '100%', 
+                transition: 'transform 0.2s',
+                '&:hover': { transform: 'translateY(-4px)' }
+              }}
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+              <CardActionArea 
+                onClick={() => router.push(module.path)} 
+                sx={{ height: '100%', p: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}
+              >
+                <Box sx={{ color: module.color, mb: 2 }}>
+                  {module.icon}
+                </Box>
+                <CardContent>
+                  <Typography variant="h5" component="h2" gutterBottom fontWeight="600">
+                    {module.title}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {module.description}
+                  </Typography>
+                </CardContent>
+              </CardActionArea>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+    </Container>
   );
 }

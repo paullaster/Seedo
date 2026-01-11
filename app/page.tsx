@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { Box, Typography, Card, CardActionArea, CardContent, Container, Grid2 as Grid, useTheme } from '@mui/material';
+import { Box, Typography, Card, CardActionArea, CardContent, Container, Grid, useTheme } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
@@ -48,16 +48,16 @@ export default function Home() {
       <Grid container spacing={3} justifyContent="center">
         {modules.map((module) => (
           <Grid size={{ xs: 12, sm: 6, md: 4 }} key={module.title}>
-            <Card 
-              elevation={3} 
-              sx={{ 
-                height: '100%', 
+            <Card
+              elevation={3}
+              sx={{
+                height: '100%',
                 transition: 'transform 0.2s',
                 '&:hover': { transform: 'translateY(-4px)' }
               }}
             >
-              <CardActionArea 
-                onClick={() => router.push(module.path)} 
+              <CardActionArea
+                onClick={() => router.push(module.path)}
                 sx={{ height: '100%', p: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}
               >
                 <Box sx={{ color: module.color, mb: 2 }}>

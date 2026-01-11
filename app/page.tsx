@@ -1,10 +1,16 @@
 'use client';
 import React from 'react';
-import { Box, Typography, Card, CardActionArea, CardContent, Container, Grid, useTheme } from '@mui/material';
+import { Box, Typography, Card, CardActionArea, Container, Grid, useTheme, Chip, Stack } from '@mui/material';
 import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+
+const MotionCard = motion(Card);
+const MotionTypography = motion(Typography);
+const MotionGrid = motion(Grid);
 
 export default function Home() {
   const router = useRouter();
@@ -12,70 +18,143 @@ export default function Home() {
 
   const modules = [
     {
-      title: 'Farmer',
-      description: 'Manage produce & account',
-      icon: <AgricultureIcon fontSize="large" />,
+      title: 'FARMER',
+      subtitle: 'Production & Accounts',
+      description: 'Manage harvest data, track growth cycles, and view financial statements.',
+      icon: <AgricultureIcon sx={{ fontSize: 60 }} />,
       color: theme.palette.primary.main,
       path: '/farmer',
+      badge: 'PRODUCE'
     },
     {
-      title: 'Agent',
-      description: 'Collection & Workflow',
-      icon: <LocalShippingIcon fontSize="large" />,
+      title: 'AGENT',
+      subtitle: 'Logistics & Workflow',
+      description: 'Coordinate collections, verify quality, and manage transport logistics.',
+      icon: <LocalShippingIcon sx={{ fontSize: 60 }} />,
       color: theme.palette.secondary.main,
       path: '/agent',
+      badge: 'LOGISTICS'
     },
     {
-      title: 'Admin',
-      description: 'Management & Analytics',
-      icon: <AdminPanelSettingsIcon fontSize="large" />,
-      color: theme.palette.info.main,
+      title: 'ADMIN',
+      subtitle: 'Control & Analytics',
+      description: 'System-wide oversight, user management, and advanced reporting metrics.',
+      icon: <AdminPanelSettingsIcon sx={{ fontSize: 60 }} />,
+      color: '#FF4081', // Pink/Red neon for admin
       path: '/admin',
+      badge: 'SYSTEM'
     },
   ];
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        type: "spring" as const,
+        stiffness: 100
+      }
+    }
+  };
+
   return (
-    <Container maxWidth="md" sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', py: 4 }}>
-      <Box sx={{ textAlign: 'center', mb: 6 }}>
-        <Typography variant="h3" component="h1" fontWeight="700" color="primary" gutterBottom>
+    <Container maxWidth="lg" sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', py: 8 }}>
+      
+      <Box component={motion.div} initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} sx={{ textAlign: 'center', mb: 10 }}>
+        <Stack direction="row" justifyContent="center" alignItems="center" spacing={1} mb={2}>
+           <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'primary.main', boxShadow: `0 0 10px ${theme.palette.primary.main}` }} />
+           <Typography variant="overline" color="primary" letterSpacing={3}>SYSTEM ONLINE</Typography>
+        </Stack>
+        
+        <Typography variant="h1" sx={{ 
+          background: `linear-gradient(180deg, #fff 0%, ${theme.palette.primary.main} 100%)`,
+          backgroundClip: 'text',
+          textFillColor: 'transparent',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          filter: `drop-shadow(0 0 30px ${theme.palette.primary.main}40)`
+        }}>
           AgriCollect
         </Typography>
-        <Typography variant="h6" color="text.secondary">
-          Select your role to continue
+        <Typography variant="h5" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto', mt: 2, fontWeight: 300 }}>
+          Next-Generation Agricultural Supply Chain Management
         </Typography>
       </Box>
 
-      <Grid container spacing={3} justifyContent="center">
+      <MotionGrid container spacing={4} variants={containerVariants} initial="hidden" animate="visible">
         {modules.map((module) => (
-          <Grid size={{ xs: 12, sm: 6, md: 4 }} key={module.title}>
-            <Card
-              elevation={3}
+          <MotionGrid size={{ xs: 12, md: 4 }} key={module.title} variants={itemVariants}>
+            <MotionCard
+              whileHover={{ scale: 1.03, translateY: -10 }}
               sx={{
                 height: '100%',
-                transition: 'transform 0.2s',
-                '&:hover': { transform: 'translateY(-4px)' }
+                position: 'relative',
+                overflow: 'visible',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '2px',
+                  background: `linear-gradient(90deg, transparent, ${module.color}, transparent)`,
+                  opacity: 0,
+                  transition: 'opacity 0.3s ease'
+                },
+                '&:hover::before': {
+                  opacity: 1
+                }
               }}
             >
               <CardActionArea
                 onClick={() => router.push(module.path)}
-                sx={{ height: '100%', p: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}
+                sx={{ height: '100%', p: 4, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'space-between' }}
               >
-                <Box sx={{ color: module.color, mb: 2 }}>
-                  {module.icon}
-                </Box>
-                <CardContent>
-                  <Typography variant="h5" component="h2" gutterBottom fontWeight="600">
+                <Box>
+                  <Stack direction="row" justifyContent="space-between" width="100%" mb={3}>
+                    <Box sx={{ 
+                      p: 2, 
+                      borderRadius: '16px', 
+                      bgcolor: `${module.color}15`, 
+                      color: module.color,
+                      boxShadow: `0 0 20px ${module.color}20`
+                    }}>
+                      {module.icon}
+                    </Box>
+                    <Chip label={module.badge} size="small" sx={{ borderColor: module.color, color: module.color, fontWeight: 700 }} variant="outlined" />
+                  </Stack>
+                  
+                  <Typography variant="h4" gutterBottom fontWeight="800" letterSpacing={1}>
                     {module.title}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="subtitle1" color="primary.light" gutterBottom sx={{ mb: 2 }}>
+                     {module.subtitle}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
                     {module.description}
                   </Typography>
-                </CardContent>
+                </Box>
+                
+                <Box sx={{ mt: 4, display: 'flex', alignItems: 'center', color: module.color, gap: 1 }}>
+                  <Typography variant="button">Access Module</Typography>
+                  <ArrowForwardIcon fontSize="small" />
+                </Box>
               </CardActionArea>
-            </Card>
-          </Grid>
+            </MotionCard>
+          </MotionGrid>
         ))}
-      </Grid>
+      </MotionGrid>
     </Container>
   );
 }

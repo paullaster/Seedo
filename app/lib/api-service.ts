@@ -46,17 +46,39 @@ export const apiService = {
     const user: User = {
       id: `U${Math.random().toString(36).substr(2, 5)}`,
       name: provider === 'google' ? 'Google User' : identity.split('@')[0],
-      email: identity.includes('@') ? identity : undefined,
-      phone: !identity.includes('@') ? identity : undefined,
+      email: identity.includes('@') ? identity : 'google_user@example.com',
+      phone: !identity.includes('@') ? identity : '+254700000000',
       role: 'FARMER',
       provider,
-      isComplete: false
+      isComplete: provider === 'custom' // Google users might need to complete profile
     };
 
     return { user, tokens };
   },
 
-  async register(data: Partial<FarmerRegistration>): Promise<AuthResponse> {
+  async refreshToken(refreshToken: string): Promise<AuthResponse> {
+    await new Promise(resolve => setTimeout(resolve, SIMULATED_DELAY));
+    
+    // In a real app, send refresh token to backend
+    const tokens: AuthTokens = {
+      accessToken: `at_refreshed_${Math.random().toString(36).substr(2)}`,
+      refreshToken: `rt_refreshed_${Math.random().toString(36).substr(2)}`,
+      expiresAt: Date.now() + 15 * 60 * 1000
+    };
+
+    // Mock user data
+    const user: User = {
+      id: 'U-REFRESHED',
+      name: 'Refreshed User',
+      role: 'FARMER',
+      provider: 'custom',
+      isComplete: true
+    };
+
+    return { user, tokens };
+  },
+
+  async registerFarmer(data: FarmerRegistration): Promise<AuthResponse> {
     await new Promise(resolve => setTimeout(resolve, SIMULATED_DELAY));
 
     const user: Farmer = {

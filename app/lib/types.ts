@@ -3,8 +3,8 @@ export interface User {
   name: string;
   role: 'FARMER' | 'AGENT' | 'ADMIN';
   avatarUrl?: string;
-  email?: string;
-  phone?: string;
+  email: string;
+  phone: string;
   password?: string; // For mock auth
   provider: 'google' | 'custom';
   isComplete?: boolean; // To check if multi-step registration is finished
@@ -38,7 +38,7 @@ export interface FarmerRegistration {
   name: string;
   email: string;
   phone: string;
-  nationalId?: string;
+  nationalId: string;
   password?: string;
   produceType?: string[];
   location?: {

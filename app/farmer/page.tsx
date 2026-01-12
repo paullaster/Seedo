@@ -1,11 +1,11 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { Box, Grid, Typography, Card, CardContent, Chip, Button, IconButton, Stack, useTheme, Alert, Dialog, DialogTitle, DialogContent, DialogActions, Snackbar } from '@mui/material';
+import { Box, Grid, Typography, Card, CardContent, Chip, Button, IconButton, Stack, useTheme, Alert, Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, CircularProgress as MuiCircularProgress } from '@mui/material';
 import { MOCK_WEATHER, MOCK_MARKET_RATES, MOCK_COLLECTIONS, MOCK_AGENTS } from '@/app/lib/mock-data';
-import { useAuth } from '@/app/context/AuthContext';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { calculateDistance } from '@/app/lib/geo-utils';
-import { isFarmer } from '@/app/lib/types';
+import { isFarmer, Farmer } from '@/app/lib/types';
 import WbSunnyIcon from '@mui/icons-material/WbSunny';
 import AddIcon from '@mui/icons-material/Add';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
@@ -23,7 +23,10 @@ const MotionGrid = motion(Grid);
 
 export default function FarmerDashboard() {
   const theme = useTheme();
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { data: session, status } = useSession();
+  const isLoading = status === 'loading';
+  const isAuthenticated = status === 'authenticated';
+  const user = session?.user as Farmer | undefined;
   const router = useRouter();
   const [nearestAgent, setNearestAgent] = useState<{ agent: any, distance: number } | null>(null);
   
@@ -40,7 +43,7 @@ export default function FarmerDashboard() {
   }, [isLoading, isAuthenticated, router]);
 
   useEffect(() => {
-    if (isFarmer(user) && user.location) {
+    if (user && isFarmer(user) && user.location) {
       // Find nearest agent
       let minDistance = Infinity;
       let closest = null;
@@ -72,7 +75,13 @@ export default function FarmerDashboard() {
     setSnackbarOpen(true);
   };
 
-  if (isLoading || !user) return null;
+  if (isLoading) return (
+    <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+      <MuiCircularProgress />
+    </Box>
+  );
+
+  if (!user) return null;
 
   return (
     <Box>
@@ -81,7 +90,7 @@ export default function FarmerDashboard() {
         <Grid size={{ xs: 12, md: 8 }}>
           <Box>
             <Typography variant="h4" fontWeight="900" gutterBottom>
-              Welcome back, {user.name.split(' ')[0]}!
+              Welcome back, {user.name?.split(' ')[0]}!
             </Typography>
             <Typography variant="body1" color="text.secondary">
               Here is your farm's performance overview for today.
@@ -311,7 +320,7 @@ export default function FarmerDashboard() {
               </Stack>
             </DialogContent>
             <DialogActions sx={{ p: 3 }}>
-              <Button startIcon={<PrintIcon />} onClick={() => {}}>Print</Button>
+              <Button startIcon={<PrintIcon />}>Print</Button>
               <Button 
                 variant="contained" 
                 startIcon={<EmailIcon />} 

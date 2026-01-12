@@ -7,17 +7,25 @@ export const authConfig = {
   },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
+      console.log("[AUTH]", auth);
       const isLoggedIn = !!auth?.user;
-      const isOnDashboard = nextUrl.pathname.startsWith('/farmer') || 
-                            nextUrl.pathname.startsWith('/agent') || 
-                            nextUrl.pathname.startsWith('/admin');
-      
+      const isComplete = (auth?.user as any)?.isComplete;
+      const isOnDashboard = nextUrl.pathname.startsWith('/farmer') ||
+        nextUrl.pathname.startsWith('/agent') ||
+        nextUrl.pathname.startsWith('/admin');
+      const isOnRegister = nextUrl.pathname === '/auth/register';
+
       if (isOnDashboard) {
-        if (isLoggedIn) return true;
-        return false; // Redirect unauthenticated users to login page
-      } else if (isLoggedIn && nextUrl.pathname.startsWith('/auth')) {
+        if (!isLoggedIn) return false;
+        if (!isComplete) return Response.redirect(new URL('/auth/register', nextUrl));
+        return true;
+      }
+
+      if (isLoggedIn && nextUrl.pathname.startsWith('/auth')) {
+        if (isOnRegister && !isComplete) return true;
         return Response.redirect(new URL('/farmer', nextUrl));
       }
+
       return true;
     },
   },

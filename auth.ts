@@ -4,11 +4,11 @@ import Credentials from 'next-auth/providers/credentials';
 import { authConfig } from './auth.config';
 import { apiService } from '@/app/lib/api-service';
 
-export const { 
-  handlers: { GET, POST }, 
-  auth, 
-  signIn, 
-  signOut 
+export const {
+  handlers: { GET, POST },
+  auth,
+  signIn,
+  signOut
 } = NextAuth({
   ...authConfig,
   providers: [
@@ -19,10 +19,10 @@ export const {
     Credentials({
       async authorize(credentials) {
         if (!credentials?.identity || !credentials?.code) return null;
-        
+
         // Custom OTP flow: Identity + OTP Code
         const isValid = await apiService.verifyOTP(credentials.identity as string, credentials.code as string);
-        
+
         if (isValid) {
           // In a real app, this calls the backend to get tokens and user
           const response = await apiService.login(credentials.identity as string, undefined, 'custom');
@@ -36,7 +36,13 @@ export const {
     }),
   ],
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, trigger, session }) {
+      // Handle session update
+      if (trigger === "update" && session) {
+        console.log("Session update triggered:", session);
+        return { ...token, ...session };
+      }
+
       // Initial sign in
       if (account && user) {
         return {
@@ -57,6 +63,16 @@ export const {
 
       // If the access token has expired, try to update it
       try {
+        // Also check DB for profile updates (e.g. isComplete)
+        if (token.email) {
+          const dbUser = await apiService.getUser(token.email as string);
+          if (dbUser && dbUser.isComplete) {
+            token.isComplete = true;
+            // Also update role or other fields if needed
+            token.role = dbUser.role;
+          }
+        }
+
         console.log("Refreshing access token...");
         const response = await apiService.refreshToken(token.refreshToken as string);
         return {
@@ -72,6 +88,7 @@ export const {
     },
     async session({ session, token }) {
       if (token) {
+        console.log("[SESSION]:", token);
         session.user.id = token.sub as string;
         (session.user as any).role = token.role;
         (session.user as any).accessToken = token.accessToken;

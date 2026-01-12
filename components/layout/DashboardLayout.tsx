@@ -20,6 +20,7 @@ import {
   alpha
 } from '@mui/material';
 import { usePathname, useRouter } from 'next/navigation';
+import { signOut, useSession } from 'next-auth/react';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -46,9 +47,14 @@ export default function DashboardLayout({ children, navItems, role }: DashboardL
   const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const { data: session } = useSession();
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
+  };
+
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: '/auth/login' });
   };
 
   const drawerContent = (
@@ -155,17 +161,17 @@ export default function DashboardLayout({ children, navItems, role }: DashboardL
         }}>
           <Stack direction="row" spacing={2} alignItems="center">
             <Avatar sx={{ bgcolor: theme.palette.secondary.main, color: '#000', fontWeight: 'bold' }}>
-              {role[0]}
+              {session?.user?.name?.[0] || role[0]}
             </Avatar>
             <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
               <Typography variant="subtitle2" noWrap fontWeight="bold">
-                User {role}
+                {session?.user?.name || `User ${role}`}
               </Typography>
               <Typography variant="caption" color="text.secondary" noWrap>
-                Logged In
+                {session?.user?.email || 'Logged In'}
               </Typography>
             </Box>
-            <IconButton size="small" sx={{ color: theme.palette.error.main }} onClick={() => router.push('/')}>
+            <IconButton size="small" sx={{ color: theme.palette.error.main }} onClick={handleLogout}>
               <LogoutIcon fontSize="small" />
             </IconButton>
           </Stack>

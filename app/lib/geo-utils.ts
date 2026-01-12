@@ -11,7 +11,28 @@ export const getGeoLocation = (): Promise<{ lat: number; lng: number }> => {
           });
         },
         (error) => {
-          reject(error);
+          // Improve error messaging
+          let errorMessage = 'An unknown error occurred.';
+          switch (error.code) {
+            case 1: // PERMISSION_DENIED
+              errorMessage = 'User denied the request for Geolocation. Please enable location services in your browser settings.';
+              break;
+            case 2: // POSITION_UNAVAILABLE
+              errorMessage = 'Location information is unavailable.';
+              break;
+            case 3: // TIMEOUT
+              errorMessage = 'The request to get user location timed out. Please try again.';
+              break;
+            default:
+              errorMessage = error.message || 'An unknown error occurred.';
+          }
+          console.error('Geolocation Error:', error);
+          reject(new Error(errorMessage));
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 20000,
+          maximumAge: 0
         }
       );
     }
@@ -21,13 +42,13 @@ export const getGeoLocation = (): Promise<{ lat: number; lng: number }> => {
 export const reverseGeocode = async (lat: number, lng: number): Promise<{ address: string; placeId: string }> => {
   // Simulate API call delay
   await new Promise(resolve => setTimeout(resolve, 1000));
-  
+
   // In a real app, fetch from Google Maps / Nominatim here.
   // For prototype, return a mock address based on lat/lng "zone".
-  
+
   const zones = ['Kiambu', 'Eldoret', 'Nakuru', 'Meru', 'Machakos'];
   const randomZone = zones[Math.floor(Math.random() * zones.length)];
-  
+
   return {
     address: `Farm Block ${Math.floor(Math.random() * 100)}, ${randomZone} Road, Kenya`,
     placeId: `PID-${Date.now()}`

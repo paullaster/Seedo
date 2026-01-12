@@ -5,7 +5,7 @@ import {
   Alert, Stepper, Step, StepLabel, 
   Stack, MenuItem, CircularProgress, Divider
 } from '@mui/material';
-import { useSession, signIn } from 'next-auth/react';
+import { useSession, signIn, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { apiService } from '@/app/lib/api-service';
 import { getGeoLocation, reverseGeocode } from '@/app/lib/geo-utils';
@@ -50,22 +50,23 @@ export default function RegisterPage() {
         email: session.user?.email || '',
         provider: (session.user as any).provider || 'google'
       }));
-      // If google user and we are on first steps, skip to Farm Details
-      if (activeStep < 2) {
-        setActiveStep(2);
-      }
     }
-  }, [session, activeStep]);
+  }, [session]);
 
   const handleNext = async () => {
     setError('');
     
-    // Step-specific logic
-    if (activeStep === 0 && formData.provider === 'custom') {
-      // Send OTP to email (primary verification)
+    // Step 0: Identity (Send OTP to Phone for ALL users)
+    if (activeStep === 0) {
+      if (!formData.phone) {
+        setError('Please provide a phone number for verification.');
+        return;
+      }
+
       setLoading(true);
       try {
-        const res = await apiService.sendOTP(formData.email);
+        // We now verify Phone for everyone as it's used for payments
+        const res = await apiService.sendOTP(formData.phone);
         if (res.success) {
           setOtpSent(true);
           setActiveStep(1);
@@ -80,11 +81,11 @@ export default function RegisterPage() {
       return;
     }
 
+    // Step 1: Verification (Verify OTP for Phone)
     if (activeStep === 1) {
-      // Verify OTP
       setLoading(true);
       try {
-        const isValid = await apiService.verifyOTP(formData.email, formData.otp);
+        const isValid = await apiService.verifyOTP(formData.phone, formData.otp);
         if (isValid) {
           setActiveStep(2);
         } else {
@@ -101,8 +102,16 @@ export default function RegisterPage() {
     setActiveStep((prev) => prev + 1);
   };
 
-  const handleBack = () => {
-    if (session?.user && activeStep === 2) return; // Cannot go back to identity if google auth is done
+  const handleBack = async () => {
+    if (activeStep === 0) {
+      if (session?.user) {
+        // If Google user cancels, sign them out (clear session) and go home
+        await signOut({ callbackUrl: '/' });
+      } else {
+        router.push('/');
+      }
+      return;
+    }
     setActiveStep((prev) => prev - 1);
   };
 
@@ -129,13 +138,19 @@ export default function RegisterPage() {
   };
 
   const handleSubmit = async () => {
-    if (formData.provider === 'custom' && formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return;
+    if (formData.provider === 'custom') {
+      if (formData.password.length < 6) {
+        setError('Password must be at least 6 characters long.');
+        return;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        setError('Passwords do not match');
+        return;
+      }
     }
     setLoading(true);
     try {
-      const response = await apiService.registerFarmer({
+      await apiService.registerFarmer({
         ...formData,
         nationalId: formData.nationalId
       });
@@ -146,8 +161,9 @@ export default function RegisterPage() {
         router.push('/farmer');
       } else {
         // Custom flow: Log them in after registration
+        // Use PHONE as identity because that's what we verified with OTP
         await signIn('credentials', {
-          identity: formData.email, // Use email as primary identity
+          identity: formData.phone, 
           code: formData.otp,
           callbackUrl: '/farmer'
         });
@@ -163,22 +179,28 @@ export default function RegisterPage() {
       case 0: // Identity
         return (
           <Stack spacing={2}>
-            <Button
-              variant="outlined"
-              fullWidth
-              size="large"
-              startIcon={<GoogleIcon />}
-              onClick={() => signIn('google')}
-              sx={{ height: 50, mb: 2 }}
-            >
-              Sign up with Google
-            </Button>
-            <Divider><Typography variant="body2" color="text.secondary">OR</Typography></Divider>
+            {!session?.user && (
+              <>
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  size="large"
+                  startIcon={<GoogleIcon />}
+                  onClick={() => signIn('google')}
+                  sx={{ height: 50, mb: 2 }}
+                >
+                  Sign up with Google
+                </Button>
+                <Divider><Typography variant="body2" color="text.secondary">OR</Typography></Divider>
+              </>
+            )}
+            
             <TextField 
               label="Full Name" 
               fullWidth required 
               value={formData.name}
               onChange={(e) => setFormData({...formData, name: e.target.value})}
+              disabled={formData.provider === 'google'} 
             />
             <TextField 
               label="Email Address" 
@@ -186,6 +208,7 @@ export default function RegisterPage() {
               fullWidth required 
               value={formData.email}
               onChange={(e) => setFormData({...formData, email: e.target.value})}
+              disabled={formData.provider === 'google'} 
             />
             <TextField 
               label="Phone Number" 
@@ -194,6 +217,7 @@ export default function RegisterPage() {
               value={formData.phone}
               onChange={(e) => setFormData({...formData, phone: e.target.value})}
               placeholder="e.g. +2547..."
+              helperText="Mandatory: This will be used for M-Pesa payments"
             />
           </Stack>
         );
@@ -201,10 +225,10 @@ export default function RegisterPage() {
         return (
           <Stack spacing={2} textAlign="center">
             <Typography variant="body1">
-              Verify your Email
+              Verify your Phone Number
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              We sent a code to {formData.email}
+              We sent a code to {formData.phone}
             </Typography>
             <TextField 
               label="6-Digit Code" 
@@ -213,25 +237,12 @@ export default function RegisterPage() {
               onChange={(e) => setFormData({...formData, otp: e.target.value})}
               inputProps={{ maxLength: 6, style: { textAlign: 'center', letterSpacing: '8px', fontSize: '24px' } }}
             />
-            <Button size="small" onClick={() => setActiveStep(0)}>Change Contact Info</Button>
+            <Button size="small" onClick={() => setActiveStep(0)}>Change Phone Number</Button>
           </Stack>
         );
       case 2: // Farm Details
         return (
           <Stack spacing={3}>
-            {/* If Google user didn't provide phone, show it here */}
-            {(!formData.phone || formData.provider === 'google') && (
-              <TextField 
-                label="Phone Number" 
-                type="tel"
-                fullWidth required 
-                value={formData.phone}
-                onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                placeholder="e.g. +2547..."
-                helperText="Required for M-Pesa payments and updates"
-              />
-            )}
-
             <TextField 
               label="National ID / Passport" 
               fullWidth required 
@@ -302,7 +313,7 @@ export default function RegisterPage() {
               <Box textAlign="center" py={4}>
                 <Typography variant="h6" color="primary" gutterBottom>Profile Ready!</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Your Google account is now linked with your farm details.
+                  Your Google account is now linked with your farm details and verified phone.
                 </Typography>
               </Box>
             )}
@@ -339,9 +350,7 @@ export default function RegisterPage() {
 
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
           <Button
-            disabled={activeStep === 0 || (session?.user && activeStep === 2)}
             onClick={handleBack}
-            sx={{ visibility: (activeStep === 0 || (session?.user && activeStep === 2)) ? 'hidden' : 'visible' }}
           >
             Back
           </Button>
@@ -363,7 +372,7 @@ export default function RegisterPage() {
                 loading ||
                 (activeStep === 0 && (!formData.name || !formData.email || !formData.phone)) ||
                 (activeStep === 1 && formData.otp.length < 6) ||
-                (activeStep === 2 && (!formData.nationalId || !formData.produceType.length || !formData.location.address || !formData.phone))
+                (activeStep === 2 && (!formData.nationalId || !formData.produceType.length || !formData.location.address))
               }
             >
               {loading ? <CircularProgress size={24} color="inherit" /> : 'Next Step'}

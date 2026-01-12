@@ -1,48 +1,57 @@
 import { User, Farmer, FarmerRegistration, AuthResponse, AuthTokens } from './types';
 
-// Mock DB in memory for the prototype
-const MOCK_DB = {
-  users: [] as User[],
-  otps: new Map<string, { code: string; expires: number }>(),
-};
-
 const SIMULATED_DELAY = 800;
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+
+// Helper to call the mock state API
+async function callMockDB(action: string, data: any) {
+  // Use absolute URL for server-side calls, relative for client
+  const baseUrl = typeof window === 'undefined' ? 'http://localhost:3000' : '';
+  const res = await fetch(`${baseUrl}/api/mock/state`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...data }),
+  });
+  return res.json();
+}
 
 export const apiService = {
   // --- OTP Service ---
   async sendOTP(identity: string): Promise<{ success: boolean; message: string }> {
-    await new Promise(resolve => setTimeout(resolve, SIMULATED_DELAY));
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    MOCK_DB.otps.set(identity, { 
-      code, 
-      expires: Date.now() + 5 * 60 * 1000 // 5 mins
-    });
-    console.log(`[MOCK API] OTP for ${identity}: ${code}`);
+    const res = await callMockDB('sendOTP', { identity });
+    console.log(`[CLIENT API] OTP Sent: ${res.code}`); // Log for dev visibility
     return { success: true, message: 'OTP sent successfully' };
   },
 
   async verifyOTP(identity: string, code: string): Promise<boolean> {
-    await new Promise(resolve => setTimeout(resolve, SIMULATED_DELAY));
-    const stored = MOCK_DB.otps.get(identity);
-    if (stored && stored.code === code && stored.expires > Date.now()) {
-      MOCK_DB.otps.delete(identity);
-      return true;
-    }
-    return false;
+    const res = await callMockDB('verifyOTP', { identity, code });
+    return res.valid;
+  },
+
+  async getUser(identity: string): Promise<User | null> {
+    // Try to find by email or phone
+    const res = await callMockDB('getUser', { email: identity, phone: identity });
+    return res.user;
   },
 
   // --- Auth Actions ---
   async login(identity: string, password?: string, provider: 'google' | 'custom' = 'custom'): Promise<AuthResponse> {
     await new Promise(resolve => setTimeout(resolve, SIMULATED_DELAY));
     
-    // In a real app, this calls the NestJS backend
-    // For mock, we'll return a token and a user
+    // Check if user exists in Mock DB
+    const existingUser = await apiService.getUser(identity);
+
     const tokens: AuthTokens = {
       accessToken: `at_${Math.random().toString(36).substr(2)}`,
       refreshToken: `rt_${Math.random().toString(36).substr(2)}`,
       expiresAt: Date.now() + 15 * 60 * 1000 // 15 mins
     };
 
+    if (existingUser) {
+      return { user: existingUser, tokens };
+    }
+
+    // Fallback for new Google users (or if custom user not found but we want to simulate partial flow)
     const user: User = {
       id: `U${Math.random().toString(36).substr(2, 5)}`,
       name: provider === 'google' ? 'Google User' : identity.split('@')[0],
@@ -59,14 +68,12 @@ export const apiService = {
   async refreshToken(refreshToken: string): Promise<AuthResponse> {
     await new Promise(resolve => setTimeout(resolve, SIMULATED_DELAY));
     
-    // In a real app, send refresh token to backend
     const tokens: AuthTokens = {
       accessToken: `at_refreshed_${Math.random().toString(36).substr(2)}`,
       refreshToken: `rt_refreshed_${Math.random().toString(36).substr(2)}`,
       expiresAt: Date.now() + 15 * 60 * 1000
     };
 
-    // Mock user data
     const user: User = {
       id: 'U-REFRESHED',
       name: 'Refreshed User',
@@ -94,6 +101,8 @@ export const apiService = {
       isComplete: true
     };
 
+    await callMockDB('register', { user });
+
     const tokens: AuthTokens = {
       accessToken: `at_${Math.random().toString(36).substr(2)}`,
       refreshToken: `rt_${Math.random().toString(36).substr(2)}`,
@@ -102,13 +111,4 @@ export const apiService = {
 
     return { user, tokens };
   },
-
-  async refreshToken(refreshToken: string): Promise<AuthTokens> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return {
-      accessToken: `at_new_${Math.random().toString(36).substr(2)}`,
-      refreshToken: `rt_new_${Math.random().toString(36).substr(2)}`,
-      expiresAt: Date.now() + 15 * 60 * 1000
-    };
-  }
 };

@@ -1,19 +1,78 @@
 'use client';
-import React from 'react';
-import { Box, Grid, Typography, Card, CardContent, Chip, Button, IconButton, Stack, useTheme } from '@mui/material';
-import { MOCK_WEATHER, MOCK_MARKET_RATES, MOCK_COLLECTIONS } from '@/app/lib/mock-data';
+import React, { useEffect, useState } from 'react';
+import { Box, Grid, Typography, Card, CardContent, Chip, Button, IconButton, Stack, useTheme, Alert, Dialog, DialogTitle, DialogContent, DialogActions, Snackbar } from '@mui/material';
+import { MOCK_WEATHER, MOCK_MARKET_RATES, MOCK_COLLECTIONS, MOCK_AGENTS } from '@/app/lib/mock-data';
+import { useAuth } from '@/app/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { calculateDistance } from '@/app/lib/geo-utils';
+import { isFarmer } from '@/app/lib/types';
 import WbSunnyIcon from '@mui/icons-material/WbSunny';
 import AddIcon from '@mui/icons-material/Add';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import ReceiptIcon from '@mui/icons-material/Receipt';
+import EmailIcon from '@mui/icons-material/Email';
+import PrintIcon from '@mui/icons-material/Print';
 import { motion } from 'framer-motion';
 
 const MotionCard = motion(Card);
+const MotionGrid = motion(Grid);
 
 export default function FarmerDashboard() {
   const theme = useTheme();
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
+  const [nearestAgent, setNearestAgent] = useState<{ agent: any, distance: number } | null>(null);
+  
+  // Invoice Dialog State
+  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push('/auth/login');
+    }
+  }, [isLoading, isAuthenticated, router]);
+
+  useEffect(() => {
+    if (isFarmer(user) && user.location) {
+      // Find nearest agent
+      let minDistance = Infinity;
+      let closest = null;
+
+      MOCK_AGENTS.forEach(agent => {
+        // Assuming Agent 1 is at -1.29, 36.82 (Nairobi) and Agent 2 is at -0.51, 35.26 (Eldoret)
+        const agentLoc = agent.id === 'A001' ? { lat: -1.2921, lng: 36.8219 } : { lat: -0.5143, lng: 35.2698 };
+        
+        const dist = calculateDistance(user.location.lat, user.location.lng, agentLoc.lat, agentLoc.lng);
+        if (dist < minDistance) {
+          minDistance = dist;
+          closest = agent;
+        }
+      });
+
+      if (closest) {
+        setNearestAgent({ agent: closest, distance: minDistance });
+      }
+    }
+  }, [user]);
+
+  const handleViewInvoice = (invoice: any) => {
+    setSelectedInvoice(invoice);
+    setOpenDialog(true);
+  };
+
+  const handleResendReceipt = () => {
+    setSnackbarMessage(`Receipt sent to ${user?.email}`);
+    setSnackbarOpen(true);
+  };
+
+  if (isLoading || !user) return null;
 
   return (
     <Box>
@@ -22,11 +81,21 @@ export default function FarmerDashboard() {
         <Grid size={{ xs: 12, md: 8 }}>
           <Box>
             <Typography variant="h4" fontWeight="900" gutterBottom>
-              Welcome back, Elias!
+              Welcome back, {user.name.split(' ')[0]}!
             </Typography>
             <Typography variant="body1" color="text.secondary">
               Here is your farm's performance overview for today.
             </Typography>
+            
+            {nearestAgent && (
+              <Alert 
+                icon={<LocationOnIcon fontSize="inherit" />} 
+                severity="info" 
+                sx={{ mt: 2, bgcolor: 'rgba(2,136,209,0.1)', border: '1px solid rgba(2,136,209,0.2)' }}
+              >
+                Nearest Collection Agent: <strong>{nearestAgent.agent.name}</strong> is <strong>{nearestAgent.distance}km</strong> away.
+              </Alert>
+            )}
           </Box>
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
@@ -50,7 +119,7 @@ export default function FarmerDashboard() {
         </Grid>
       </Grid>
 
-      {/* 2. Market Rates Ticker (Horizontal Scroll) */}
+      {/* 2. Market Rates Ticker */}
       <Box mb={4}>
         <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
            <TrendingUpIcon color="primary" /> Live Market Rates
@@ -82,12 +151,12 @@ export default function FarmerDashboard() {
         </Stack>
       </Box>
 
-      {/* 3. Recent Collections List */}
+      {/* 3. Invoices / Recent Collections */}
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 8 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6" fontWeight="bold">Recent Collections</Typography>
-            <Button variant="outlined" size="small">View All</Button>
+            <Typography variant="h6" fontWeight="bold">My Invoices & Collections</Typography>
+            <Button variant="outlined" size="small">View Full History</Button>
           </Box>
           
           <Stack spacing={2}>
@@ -102,12 +171,15 @@ export default function FarmerDashboard() {
                 <CardContent sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: '16px !important' }}>
                   <Stack direction="row" spacing={2} alignItems="center">
                     <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: `${theme.palette.primary.main}15`, color: theme.palette.primary.main }}>
-                      <LocalShippingIcon />
+                      <ReceiptIcon />
                     </Box>
                     <Box>
-                      <Typography variant="subtitle1" fontWeight="bold">{collection.produceType} ({collection.grade})</Typography>
+                      <Typography variant="subtitle1" fontWeight="bold">Invoice #{collection.id.split('-')[1]}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                         {collection.produceType} • {collection.weightKg}kg • Grade {collection.grade}
+                      </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {new Date(collection.timestamp).toLocaleDateString()} • {collection.weightKg}kg
+                        {new Date(collection.timestamp).toLocaleDateString()}
                       </Typography>
                     </Box>
                   </Stack>
@@ -116,13 +188,22 @@ export default function FarmerDashboard() {
                     <Typography variant="h6" fontWeight="bold" color="primary.main">
                       KES {collection.totalAmount.toLocaleString()}
                     </Typography>
-                    <Chip 
-                      label={collection.status} 
-                      size="small" 
-                      color={collection.status === 'PAID' ? 'success' : collection.status === 'PENDING' ? 'warning' : 'info'}
-                      variant="outlined"
-                      sx={{ mt: 0.5, height: 20, fontSize: '0.7rem' }}
-                    />
+                    <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center" mt={0.5}>
+                      <Chip 
+                        label={collection.status} 
+                        size="small" 
+                        color={collection.status === 'PAID' ? 'success' : collection.status === 'PENDING' ? 'warning' : 'info'}
+                        variant="outlined"
+                        sx={{ height: 20, fontSize: '0.7rem' }}
+                      />
+                      <Button 
+                        size="small" 
+                        sx={{ minWidth: 0, p: 0.5 }}
+                        onClick={() => handleViewInvoice(collection)}
+                      >
+                         View
+                      </Button>
+                    </Stack>
                   </Box>
                 </CardContent>
               </MotionCard>
@@ -144,17 +225,11 @@ export default function FarmerDashboard() {
                   startIcon={<AddIcon />}
                   size="large"
                   sx={{ py: 2 }}
+                  onClick={() => router.push('/farmer/harvest')}
                 >
                   New Harvest Notice
                 </Button>
                 <Button 
-                  variant="outlined" 
-                  fullWidth 
-                  size="large"
-                >
-                  View Statements
-                </Button>
-                 <Button 
                   variant="outlined" 
                   fullWidth 
                   size="large"
@@ -165,19 +240,97 @@ export default function FarmerDashboard() {
 
               <Box sx={{ mt: 4, p: 2, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.03)' }}>
                  <Typography variant="caption" color="text.secondary" display="block" mb={1}>
-                   FARMER STATUS
+                   FARMER PROFILE
                  </Typography>
                  <Typography variant="body2" color="primary.main">
-                   ● Active & Verified
+                   ● Verified Account
                  </Typography>
                  <Typography variant="body2" color="text.secondary" mt={0.5}>
-                   Region: Kiambu Zone A
+                   {isFarmer(user) ? (user.location?.address || 'Location not set') : ''}
+                 </Typography>
+                 <Typography variant="body2" color="text.secondary">
+                   ID: {isFarmer(user) ? user.nationalId : ''}
                  </Typography>
               </Box>
             </CardContent>
           </MotionCard>
         </Grid>
       </Grid>
+
+      {/* Invoice Details Dialog */}
+      <Dialog 
+        open={openDialog} 
+        onClose={() => setOpenDialog(false)}
+        PaperProps={{ sx: { borderRadius: 4, width: '100%', maxWidth: 500 } }}
+      >
+        {selectedInvoice && (
+          <>
+            <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box>
+                <Typography variant="h6" fontWeight="bold">Collection Receipt</Typography>
+                <Typography variant="caption" color="text.secondary">ID: {selectedInvoice.id}</Typography>
+              </Box>
+              <Chip label={selectedInvoice.status} color="success" size="small" />
+            </DialogTitle>
+            <DialogContent dividers>
+              <Stack spacing={2}>
+                <Box display="flex" justifyContent="space-between">
+                  <Typography color="text.secondary">Date</Typography>
+                  <Typography fontWeight="bold">{new Date(selectedInvoice.timestamp).toLocaleString()}</Typography>
+                </Box>
+                <Box display="flex" justifyContent="space-between">
+                  <Typography color="text.secondary">Farmer</Typography>
+                  <Typography fontWeight="bold">{user.name}</Typography>
+                </Box>
+                <Box display="flex" justifyContent="space-between">
+                  <Typography color="text.secondary">Agent</Typography>
+                  <Typography fontWeight="bold">Agent #{selectedInvoice.agentId}</Typography>
+                </Box>
+                <Box sx={{ my: 2, borderTop: '1px dashed grey', borderBottom: '1px dashed grey', py: 2 }}>
+                  <Box display="flex" justifyContent="space-between" mb={1}>
+                    <Typography>Produce Type</Typography>
+                    <Typography fontWeight="bold">{selectedInvoice.produceType}</Typography>
+                  </Box>
+                  <Box display="flex" justifyContent="space-between" mb={1}>
+                    <Typography>Weight</Typography>
+                    <Typography fontWeight="bold">{selectedInvoice.weightKg} kg</Typography>
+                  </Box>
+                   <Box display="flex" justifyContent="space-between" mb={1}>
+                    <Typography>Grade</Typography>
+                    <Typography fontWeight="bold">{selectedInvoice.grade}</Typography>
+                  </Box>
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography>Rate</Typography>
+                    <Typography fontWeight="bold">{selectedInvoice.pricePerKg} / kg</Typography>
+                  </Box>
+                </Box>
+                <Box display="flex" justifyContent="space-between">
+                  <Typography variant="h6">Total Payout</Typography>
+                  <Typography variant="h6" color="primary.main" fontWeight="900">KES {selectedInvoice.totalAmount.toLocaleString()}</Typography>
+                </Box>
+              </Stack>
+            </DialogContent>
+            <DialogActions sx={{ p: 3 }}>
+              <Button startIcon={<PrintIcon />} onClick={() => {}}>Print</Button>
+              <Button 
+                variant="contained" 
+                startIcon={<EmailIcon />} 
+                onClick={handleResendReceipt}
+              >
+                Resend Receipt
+              </Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={4000}
+        onClose={() => setSnackbarOpen(false)}
+        message={snackbarMessage}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
     </Box>
   );
 }

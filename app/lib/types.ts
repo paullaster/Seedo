@@ -5,6 +5,9 @@ export interface User {
   avatarUrl?: string;
   email?: string;
   phone?: string;
+  password?: string; // For mock auth
+  provider: 'google' | 'custom';
+  isComplete?: boolean; // To check if multi-step registration is finished
 }
 
 export interface Farmer extends User {
@@ -14,9 +17,36 @@ export interface Farmer extends User {
     lat: number;
     lng: number;
     address: string;
+    placeId?: string;
   };
   farmSize?: number; // in acres
   produceType?: string[];
+}
+
+export interface AuthTokens {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+}
+
+export interface AuthResponse {
+  user: User | Farmer;
+  tokens: AuthTokens;
+}
+
+export interface FarmerRegistration {
+  name: string;
+  email: string;
+  phone: string;
+  nationalId?: string;
+  password?: string;
+  produceType?: string[];
+  location?: {
+    lat: number;
+    lng: number;
+    address: string;
+  };
+  provider: 'google' | 'custom';
 }
 
 export interface Agent extends User {
@@ -67,4 +97,8 @@ export interface WeatherData {
   condition: 'Sunny' | 'Cloudy' | 'Rainy' | 'Stormy';
   humidity: number;
   forecast: string;
+}
+
+export function isFarmer(user: User | Farmer | Agent | null): user is Farmer {
+  return user !== null && user.role === 'FARMER';
 }

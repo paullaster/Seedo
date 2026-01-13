@@ -1,24 +1,22 @@
-'use client';
-import React from 'react';
-import DashboardLayout from '@/components/layout/DashboardLayout';
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner'; // Collection
-import InventoryIcon from '@mui/icons-material/Inventory';
-import MonetizationOnIcon from '@mui/icons-material/MonetizationOn'; // Payments
-import PersonIcon from '@mui/icons-material/Person';
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import AgentClientLayout from "./layout-client";
 
-const agentNavItems = [
-  { title: 'Dashboard', path: '/agent', icon: <DashboardIcon /> },
-  { title: 'New Collection', path: '/agent/collection', icon: <QrCodeScannerIcon /> },
-  { title: 'Inventory', path: '/agent/inventory', icon: <InventoryIcon /> },
-  { title: 'Payouts', path: '/agent/payouts', icon: <MonetizationOnIcon /> },
-  { title: 'Profile', path: '/agent/profile', icon: <PersonIcon /> },
-];
+export default async function AgentLayout({ children }: { children: React.ReactNode }) {
+  const session = await auth();
 
-export default function AgentLayout({ children }: { children: React.ReactNode }) {
+  if (session?.user && !(session.user as any).isComplete) {
+    redirect("/auth/register");
+  }
+
+  // Also enforce role if needed, but middleware handles basic protection
+  if ((session?.user as any)?.role !== 'AGENT') {
+    // redirect("/unauthorized"); // Optional: strict role check
+  }
+
   return (
-    <DashboardLayout navItems={agentNavItems} role="AGENT">
+    <AgentClientLayout>
       {children}
-    </DashboardLayout>
+    </AgentClientLayout>
   );
 }

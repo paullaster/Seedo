@@ -1,4 +1,5 @@
-import { User, Farmer, FarmerRegistration, AuthResponse, AuthTokens } from './types';
+import { User, Farmer, FarmerRegistration, AuthResponse, AuthTokens, ProduceCollection } from './types';
+import { MOCK_COLLECTIONS } from './mock-data';
 
 const SIMULATED_DELAY = 800;
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -110,5 +111,13 @@ export const apiService = {
     };
 
     return { user, tokens };
+  },
+
+  // --- Collection/Payment Actions ---
+  async getFarmerCollections(farmerId: string): Promise<ProduceCollection[]> {
+    await new Promise(resolve => setTimeout(resolve, SIMULATED_DELAY));
+    // In a real app, this would be an API call
+    // For now, filter mock data
+    return MOCK_COLLECTIONS.filter(c => c.farmerId === farmerId);
   },
 };

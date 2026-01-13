@@ -1,22 +1,19 @@
-'use client';
-import React from 'react';
-import DashboardLayout from '@/components/layout/DashboardLayout';
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
-import GrassIcon from '@mui/icons-material/Grass'; // For Harvest
-import PersonIcon from '@mui/icons-material/Person';
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import FarmerClientLayout from "./layout-client";
 
-const farmerNavItems = [
-  { title: 'Dashboard', path: '/farmer', icon: <DashboardIcon /> },
-  { title: 'Harvest Notices', path: '/farmer/harvest', icon: <GrassIcon /> },
-  { title: 'Payments', path: '/farmer/payments', icon: <AccountBalanceWalletIcon /> },
-  { title: 'Profile', path: '/farmer/profile', icon: <PersonIcon /> },
-];
+export default async function FarmerLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const session = await auth();
 
-export default function FarmerLayout({ children }: { children: React.ReactNode }) {
+  // Enforce profile completion
+  // We use 'as any' because isComplete is a custom property added in auth.ts
+  if (session?.user && !(session.user as any).isComplete) {
+    redirect("/auth/register");
+  }
+
   return (
-    <DashboardLayout navItems={farmerNavItems} role="FARMER">
+    <FarmerClientLayout>
       {children}
-    </DashboardLayout>
+    </FarmerClientLayout>
   );
 }

@@ -88,7 +88,7 @@ export const {
     },
     async session({ session, token }) {
       if (token) {
-        console.log("[SESSION]:", token);
+        console.log("[SESSION TOKEN]:", token);
         session.user.id = token.sub as string;
         (session.user as any).role = token.role;
         (session.user as any).accessToken = token.accessToken;
@@ -96,6 +96,7 @@ export const {
         (session.user as any).isComplete = token.isComplete;
         (session as any).error = token.error;
       }
+      console.log("[SESSION CREARED SESSION]:", session);
       return session;
     },
   },

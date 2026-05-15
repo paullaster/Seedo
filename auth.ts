@@ -2,7 +2,41 @@ import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
 import Credentials from 'next-auth/providers/credentials';
 import { authConfig } from './auth.config';
-import { apiService } from '@/app/lib/api-service';
+
+const NESTJS_URL = process.env.NESTJS_URL || 'http://127.0.0.1:3900';
+
+async function backendLogin(username: string, password: string) {
+  const url = `${NESTJS_URL}/api/v1/auth/login`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    console.error(`[AUTH] POST ${url} → ${res.status}: ${body.slice(0, 200)}`);
+    return null;
+  }
+  return res.json() as Promise<{ accessToken: string; userId: string }>;
+}
+
+async function backendGetUser(userId: string) {
+  const url = `${NESTJS_URL}/api/v1/users/${userId}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    console.error(`[AUTH] GET ${url} → ${res.status}`);
+    return null;
+  }
+  return res.json();
+}
+
+async function backendFindUserByEmail(email: string) {
+  const url = `${NESTJS_URL}/api/v1/users/all?search=${encodeURIComponent(email)}`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const result = await res.json() as { data: any[] };
+  return result.data?.find((u: any) => u.email === email) || null;
+}
 
 export const {
   handlers: { GET, POST },
@@ -18,85 +52,91 @@ export const {
     }),
     Credentials({
       async authorize(credentials) {
-        if (!credentials?.identity || !credentials?.code) return null;
+        if (!credentials?.identity || !credentials?.password) return null;
 
-        // Custom OTP flow: Identity + OTP Code
-        const isValid = await apiService.verifyOTP(credentials.identity as string, credentials.code as string);
+        const authResult = await backendLogin(
+          credentials.identity as string,
+          credentials.password as string,
+        );
 
-        if (isValid) {
-          // In a real app, this calls the backend to get tokens and user
-          const response = await apiService.login(credentials.identity as string, undefined, 'custom');
+        if (!authResult) return null;
+
+        const userRecord = await backendGetUser(authResult.userId);
+        if (userRecord) {
           return {
-            ...response.user,
-            ...response.tokens,
+            id: userRecord.id,
+            name: `${userRecord.first_name || ''} ${userRecord.last_name || ''}`.trim() || userRecord.email,
+            email: userRecord.email,
+            role: userRecord.role || 'FARMER',
+            accessToken: authResult.accessToken,
+            isComplete: true,
+            provider: 'custom',
           } as any;
         }
-        return null;
+
+        return {
+          id: authResult.userId,
+          name: credentials.identity as string,
+          email: credentials.identity as string,
+          role: 'FARMER',
+          accessToken: authResult.accessToken,
+          isComplete: true,
+          provider: 'custom',
+        } as any;
       },
     }),
   ],
   callbacks: {
     async jwt({ token, user, account, trigger, session }) {
-      // Handle session update
       if (trigger === "update" && session) {
-        console.log("Session update triggered:", session);
         return { ...token, ...session };
       }
 
-      // Initial sign in
       if (account && user) {
+        if (account.provider === 'google' && !(user as any).accessToken) {
+          const existing = await backendFindUserByEmail(user.email || '');
+          if (existing) {
+            return {
+              ...token,
+              id: existing.id,
+              name: `${existing.first_name || ''} ${existing.last_name || ''}`.trim() || existing.email,
+              email: existing.email,
+              role: existing.role || 'FARMER',
+              provider: 'google',
+              isComplete: true,
+            };
+          }
+          return {
+            ...token,
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: undefined,
+            provider: 'google',
+            isComplete: false,
+          };
+        }
+
         return {
           ...token,
           accessToken: (user as any).accessToken,
-          refreshToken: (user as any).refreshToken,
-          expiresAt: (user as any).expiresAt,
           role: (user as any).role,
           provider: account.provider,
           isComplete: (user as any).isComplete ?? false,
         };
       }
 
-      // Return previous token if the access token has not expired yet
-      if (Date.now() < (token.expiresAt as number)) {
-        return token;
-      }
-
-      // If the access token has expired, try to update it
-      try {
-        // Also check DB for profile updates (e.g. isComplete)
-        if (token.email) {
-          const dbUser = await apiService.getUser(token.email as string);
-          if (dbUser && dbUser.isComplete) {
-            token.isComplete = true;
-            // Also update role or other fields if needed
-            token.role = dbUser.role;
-          }
-        }
-
-        console.log("Refreshing access token...");
-        const response = await apiService.refreshToken(token.refreshToken as string);
-        return {
-          ...token,
-          accessToken: response.tokens.accessToken,
-          refreshToken: response.tokens.refreshToken ?? token.refreshToken,
-          expiresAt: response.tokens.expiresAt,
-        };
-      } catch (error) {
-        console.error("Error refreshing access token", error);
-        return { ...token, error: "RefreshAccessTokenError" };
-      }
+      return token;
     },
     async session({ session, token }) {
       if (token) {
-        console.log("[SESSION TOKEN]:", token);
-        session.user.id = token.sub as string;
+        session.user.id = token.sub as string || (token as any).id as string;
         (session.user as any).role = token.role;
         (session.user as any).accessToken = token.accessToken;
         (session.user as any).provider = token.provider;
         (session.user as any).isComplete = token.isComplete;
         (session as any).error = token.error;
       }
-      console.log("[SESSION CREARED SESSION]:", session);
       return session;
     },
   },

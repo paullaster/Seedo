@@ -1,14 +1,15 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Box, Button, TextField, Typography, Container, Paper, 
   Alert, Stepper, Step, StepLabel, 
-  Stack, MenuItem, CircularProgress, Divider
+  Stack, CircularProgress, Divider, Autocomplete
 } from '@mui/material';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { apiService } from '@/app/lib/api-service';
 import { getGeoLocation, reverseGeocode } from '@/app/lib/geo-utils';
+import type { MarketRate } from '@/app/lib/types';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import GoogleIcon from '@mui/icons-material/Google';
 import Link from 'next/link';
@@ -23,6 +24,11 @@ export default function RegisterPage() {
   const [geoLoading, setGeoLoading] = useState(false);
   const [error, setError] = useState('');
   const [otpSent, setOtpSent] = useState(false);
+  const [produceOptions, setProduceOptions] = useState<MarketRate[]>([]);
+  const [produceSearchLoading, setProduceSearchLoading] = useState(false);
+  const [produceInput, setProduceInput] = useState('');
+  const [selectedProduce, setSelectedProduce] = useState<MarketRate | null>(null);
+  const produceSearchRef = useRef<ReturnType<typeof setTimeout>>();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -137,8 +143,28 @@ export default function RegisterPage() {
     }
   };
 
+  const handleProduceSearch = (query: string) => {
+    if (produceSearchRef.current) clearTimeout(produceSearchRef.current);
+    if (!query.trim()) {
+      setProduceOptions([]);
+      return;
+    }
+    produceSearchRef.current = setTimeout(async () => {
+      setProduceSearchLoading(true);
+      try {
+        const results = await apiService.searchProduce(query);
+        setProduceOptions(results);
+      } catch {
+        setProduceOptions([]);
+      } finally {
+        setProduceSearchLoading(false);
+      }
+    }, 300);
+  };
+
   const handleSubmit = async () => {
-    if (formData.provider === 'custom') {
+    const isGoogle = formData.provider === 'google';
+    if (!isGoogle) {
       if (formData.password.length < 6) {
         setError('Password must be at least 6 characters long.');
         return;
@@ -152,20 +178,18 @@ export default function RegisterPage() {
     try {
       await apiService.registerFarmer({
         ...formData,
-        nationalId: formData.nationalId
+        nationalId: formData.nationalId,
+        authProvider: isGoogle ? 'google' : 'custom',
       });
       
-      if (formData.provider === 'google') {
-        // Update the session to mark as complete
-        await updateSession({ isComplete: true });
+      if (isGoogle) {
+        await updateSession({ isComplete: true, role: 'FARMER' });
         router.push('/farmer');
       } else {
-        // Custom flow: Log them in after registration
-        // Use PHONE as identity because that's what we verified with OTP
         await signIn('credentials', {
-          identity: formData.phone, 
-          code: formData.otp,
-          callbackUrl: '/farmer'
+          identity: formData.phone,
+          password: formData.password,
+          callbackUrl: '/farmer',
         });
       }
     } catch (err) {
@@ -234,7 +258,7 @@ export default function RegisterPage() {
               label="6-Digit Code" 
               fullWidth required 
               value={formData.otp}
-              onChange={(e) => setFormData({...formData, otp: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, otp: e.target.value })}
               inputProps={{ maxLength: 6, style: { textAlign: 'center', letterSpacing: '8px', fontSize: '24px' } }}
             />
             <Button size="small" onClick={() => setActiveStep(0)}>Change Phone Number</Button>
@@ -249,18 +273,33 @@ export default function RegisterPage() {
               value={formData.nationalId}
               onChange={(e) => setFormData({...formData, nationalId: e.target.value})}
             />
-            <TextField
-              select
-              label="Primary Produce"
-              fullWidth required
-              value={formData.produceType[0] || ''}
-              onChange={(e) => setFormData({...formData, produceType: [e.target.value]})}
-            >
-              <MenuItem value="Maize">Maize</MenuItem>
-              <MenuItem value="Wheat">Wheat</MenuItem>
-              <MenuItem value="Beans">Beans</MenuItem>
-              <MenuItem value="Coffee">Coffee</MenuItem>
-            </TextField>
+            <Autocomplete
+              options={produceOptions}
+              getOptionLabel={(option) => option.produceType}
+              inputValue={produceInput}
+              onInputChange={(_, value) => {
+                setProduceInput(value);
+                handleProduceSearch(value);
+              }}
+              value={selectedProduce}
+              onChange={(_, value) => {
+                setSelectedProduce(value);
+                setFormData({...formData, produceType: value ? [value.produceType] : []});
+                setProduceInput(value ? value.produceType : '');
+              }}
+              loading={produceSearchLoading}
+              noOptionsText={produceInput.length >= 2 ? 'No produce found' : 'Type to search...'}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Primary Produce"
+                  required
+                  placeholder="Search produce..."
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
+                />
+              )}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
+            />
 
             <Box>
               <Typography variant="subtitle2" gutterBottom>Farm Location *</Typography>

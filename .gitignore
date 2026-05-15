@@ -43,3 +43,7 @@ next-env.d.ts
 #custom
 seedo.docx
 PRD.md
+FARMER_PAYMENT_MODULE_PRD.md
+
+# Dep lock files.
+pnpm-lock.yaml

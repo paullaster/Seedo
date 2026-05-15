@@ -6,38 +6,17 @@ import {
 } from '@mui/material';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { apiService } from '@/app/lib/api-service';
 import GoogleIcon from '@mui/icons-material/Google';
 import Link from 'next/link';
 
 export default function LoginPage() {
   const router = useRouter();
   const [identity, setIdentity] = useState('');
-  const [otpCode, setOtpCode] = useState('');
-  const [step, setStep] = useState<'IDENTITY' | 'OTP'>('IDENTITY');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleRequestOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    try {
-      const res = await apiService.sendOTP(identity);
-      if (res.success) {
-        setStep('OTP');
-      } else {
-        setError(res.message);
-      }
-    } catch (err) {
-      setError('Failed to send OTP. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOTP = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
@@ -45,14 +24,14 @@ export default function LoginPage() {
     try {
       const result = await signIn('credentials', {
         identity,
-        code: otpCode,
+        password,
         redirect: false,
       });
 
       if (result?.error) {
-        setError('Invalid OTP code. Please check and try again.');
+        setError('Invalid identity or password. Please try again.');
       } else {
-        router.push('/farmer');
+        router.push('/'); 
         router.refresh();
       }
     } catch (err) {
@@ -63,81 +42,65 @@ export default function LoginPage() {
   };
 
   const handleGoogleSignIn = () => {
-    signIn('google', { callbackUrl: '/farmer' });
+    signIn('google', { callbackUrl: '/' });
   };
 
   return (
     <Container maxWidth="sm" sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <Paper sx={{ p: 4, width: '100%', borderRadius: 4, bgcolor: 'background.paper', border: '1px solid rgba(255,255,255,0.1)' }}>
-        <Typography variant="h4" fontWeight="900" gutterBottom align="center" color="primary">
+      <Paper sx={{ p: 4, width: '100%', borderRadius: 4, bgcolor: 'background.paper', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+        <Typography variant="h4" fontWeight="900" gutterBottom align="center" color="primary" sx={{ letterSpacing: -1 }}>
           AgriCollect
         </Typography>
-        <Typography variant="body1" align="center" color="text.secondary" mb={4}>
-          {step === 'IDENTITY' ? 'Farmer Secure Login' : 'Enter Verification Code'}
+        <Typography variant="body1" align="center" color="text.secondary" mb={4} sx={{ fontWeight: 500 }}>
+          Secure Login Access
         </Typography>
 
-        {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+        {error && <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>{error}</Alert>}
 
-        {step === 'IDENTITY' ? (
-          <Box component="form" onSubmit={handleRequestOTP}>
-            <TextField
-              label="Email or Phone Number"
-              fullWidth
-              required
-              margin="normal"
-              value={identity}
-              onChange={(e) => setIdentity(e.target.value)}
-              placeholder="e.g. 0712345678 or farmer@example.com"
-            />
-            <Button 
-              type="submit" 
-              variant="contained" 
-              fullWidth 
-              size="large" 
-              sx={{ mt: 3, mb: 2, height: 50 }}
-              disabled={loading}
-            >
-              {loading ? 'Sending OTP...' : 'Get Login Code'}
-            </Button>
-          </Box>
-        ) : (
-          <Box component="form" onSubmit={handleVerifyOTP}>
-            <Typography variant="body2" color="text.secondary" mb={2}>
-              We sent a 6-digit code to <strong>{identity}</strong>
-            </Typography>
-            <TextField
-              label="Verification Code"
-              fullWidth
-              required
-              margin="normal"
-              value={otpCode}
-              onChange={(e) => setOtpCode(e.target.value)}
-              inputProps={{ maxLength: 6, style: { textAlign: 'center', letterSpacing: '8px', fontSize: '24px' } }}
-            />
-            <Button 
-              type="submit" 
-              variant="contained" 
-              fullWidth 
-              size="large" 
-              sx={{ mt: 3, mb: 2, height: 50 }}
-              disabled={loading}
-            >
-              {loading ? 'Verifying...' : 'Verify & Login'}
-            </Button>
-            <Button 
-              variant="text" 
-              fullWidth 
-              onClick={() => setStep('IDENTITY')}
-              disabled={loading}
-            >
-              Change Email/Phone
-            </Button>
-          </Box>
-        )}
+        <Box component="form" onSubmit={handleLogin}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 600 }}>
+            IDENTITY
+          </Typography>
+          <TextField
+            label="Email or Phone Number"
+            fullWidth
+            required
+            margin="normal"
+            value={identity}
+            onChange={(e) => setIdentity(e.target.value)}
+            placeholder="e.g. 0712345678 or user@example.com"
+            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
+          />
+          
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2, mb: 1, fontWeight: 600 }}>
+            PASSWORD
+          </Typography>
+          <TextField
+            label="Password"
+            type="password"
+            fullWidth
+            required
+            margin="normal"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
+          />
 
-        <Box sx={{ my: 3 }}>
+          <Button 
+            type="submit" 
+            variant="contained" 
+            fullWidth 
+            size="large" 
+            sx={{ mt: 3, mb: 2, height: 56, borderRadius: 3, fontWeight: 'bold', fontSize: '1.1rem' }}
+            disabled={loading}
+          >
+            {loading ? 'Authenticating...' : 'Login to Dashboard'}
+          </Button>
+        </Box>
+
+        <Box sx={{ my: 4 }}>
           <Divider>
-            <Typography variant="body2" color="text.secondary">OR</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold', textTransform: 'uppercase' }}>External Access</Typography>
           </Divider>
         </Box>
 
@@ -148,16 +111,16 @@ export default function LoginPage() {
             size="large"
             startIcon={<GoogleIcon />}
             onClick={handleGoogleSignIn}
-            sx={{ height: 50, borderColor: 'rgba(255,255,255,0.2)', color: 'text.primary' }}
+            sx={{ height: 56, borderRadius: 3, borderColor: 'rgba(255,255,255,0.2)', color: 'text.primary', fontWeight: 'bold' }}
           >
             Continue with Google
           </Button>
 
           <Box textAlign="center" mt={2}>
             <Typography variant="body2" color="text.secondary">
-              New to AgriCollect?{' '}
+              Need a new account?{' '}
               <Link href="/auth/register" passHref legacyBehavior>
-                <MuiLink color="secondary" fontWeight="bold">Create Farmer Account</MuiLink>
+                <MuiLink color="secondary" fontWeight="900" sx={{ textDecoration: 'none' }}>Register Here</MuiLink>
               </Link>
             </Typography>
           </Box>

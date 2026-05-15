@@ -1,123 +1,158 @@
-import { User, Farmer, FarmerRegistration, AuthResponse, AuthTokens, ProduceCollection } from './types';
-import { MOCK_COLLECTIONS } from './mock-data';
+import { FarmerRegistration, AuthResponse, ProduceCollection, MarketRate, HarvestNotice, PriceHistory, CollectionStatus, Loan, Agent } from './types';
 
-const SIMULATED_DELAY = 800;
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+const getBaseUrl = () => {
+  if (typeof window === 'undefined') {
+    throw new Error('Browser window not set.');
+  }
+  if (process.env.NEXT_PUBLIC_API_URL) return `${process.env.NEXT_PUBLIC_API_URL}/api`;
+  return '/api';
+};
 
-// Helper to call the mock state API
-async function callMockDB(action: string, data: any) {
-  // Use absolute URL for server-side calls, relative for client
-  const baseUrl = typeof window === 'undefined' ? 'http://localhost:3000' : '';
-  const res = await fetch(`${baseUrl}/api/mock/state`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action, ...data }),
-  });
-  return res.json();
-}
+const API_URL = getBaseUrl();
 
 export const apiService = {
-  // --- OTP Service ---
   async sendOTP(identity: string): Promise<{ success: boolean; message: string }> {
-    const res = await callMockDB('sendOTP', { identity });
-    console.log(`[CLIENT API] OTP Sent: ${res.code}`); // Log for dev visibility
-    return { success: true, message: 'OTP sent successfully' };
+    const res = await fetch(`${API_URL}/v1/otp/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identity }),
+    });
+    if (!res.ok) throw new Error('Failed to send OTP');
+    return res.json();
   },
 
   async verifyOTP(identity: string, code: string): Promise<boolean> {
-    const res = await callMockDB('verifyOTP', { identity, code });
-    return res.valid;
-  },
-
-  async getUser(identity: string): Promise<User | null> {
-    // Try to find by email or phone
-    const res = await callMockDB('getUser', { email: identity, phone: identity });
-    return res.user;
-  },
-
-  // --- Auth Actions ---
-  async login(identity: string, password?: string, provider: 'google' | 'custom' = 'custom'): Promise<AuthResponse> {
-    await new Promise(resolve => setTimeout(resolve, SIMULATED_DELAY));
-    
-    // Check if user exists in Mock DB
-    const existingUser = await apiService.getUser(identity);
-
-    const tokens: AuthTokens = {
-      accessToken: `at_${Math.random().toString(36).substr(2)}`,
-      refreshToken: `rt_${Math.random().toString(36).substr(2)}`,
-      expiresAt: Date.now() + 15 * 60 * 1000 // 15 mins
-    };
-
-    if (existingUser) {
-      return { user: existingUser, tokens };
-    }
-
-    // Fallback for new Google users (or if custom user not found but we want to simulate partial flow)
-    const user: User = {
-      id: `U${Math.random().toString(36).substr(2, 5)}`,
-      name: provider === 'google' ? 'Google User' : identity.split('@')[0],
-      email: identity.includes('@') ? identity : 'google_user@example.com',
-      phone: !identity.includes('@') ? identity : '+254700000000',
-      role: 'FARMER',
-      provider,
-      isComplete: provider === 'custom' // Google users might need to complete profile
-    };
-
-    return { user, tokens };
-  },
-
-  async refreshToken(refreshToken: string): Promise<AuthResponse> {
-    await new Promise(resolve => setTimeout(resolve, SIMULATED_DELAY));
-    
-    const tokens: AuthTokens = {
-      accessToken: `at_refreshed_${Math.random().toString(36).substr(2)}`,
-      refreshToken: `rt_refreshed_${Math.random().toString(36).substr(2)}`,
-      expiresAt: Date.now() + 15 * 60 * 1000
-    };
-
-    const user: User = {
-      id: 'U-REFRESHED',
-      name: 'Refreshed User',
-      role: 'FARMER',
-      provider: 'custom',
-      isComplete: true
-    };
-
-    return { user, tokens };
+    const res = await fetch(`${API_URL}/v1/otp/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identity, code }),
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    return data.valid;
   },
 
   async registerFarmer(data: FarmerRegistration): Promise<AuthResponse> {
-    await new Promise(resolve => setTimeout(resolve, SIMULATED_DELAY));
+    const res = await fetch(`${API_URL}/v1/users/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
 
-    const user: Farmer = {
-      id: `F${Date.now()}`,
-      name: data.name || 'Unknown',
-      email: data.email,
-      phone: data.phone,
-      role: 'FARMER',
-      provider: data.provider || 'custom',
-      nationalId: data.nationalId || '',
-      location: data.location || { lat: 0, lng: 0, address: '' },
-      produceType: data.produceType || [],
-      isComplete: true
-    };
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Registration failed' }));
+      throw new Error(err.error || 'Registration failed');
+    }
 
-    await callMockDB('register', { user });
-
-    const tokens: AuthTokens = {
-      accessToken: `at_${Math.random().toString(36).substr(2)}`,
-      refreshToken: `rt_${Math.random().toString(36).substr(2)}`,
-      expiresAt: Date.now() + 15 * 60 * 1000
-    };
-
-    return { user, tokens };
+    return res.json();
   },
 
-  // --- Collection/Payment Actions ---
   async getFarmerCollections(farmerId: string): Promise<ProduceCollection[]> {
-    await new Promise(resolve => setTimeout(resolve, SIMULATED_DELAY));
-    // In a real app, this would be an API call
-    // For now, filter mock data
-    return MOCK_COLLECTIONS.filter(c => c.farmerId === farmerId);
+    const res = await fetch(`${API_URL}/v1/collections?farmerId=${farmerId}`);
+    if (!res.ok) throw new Error('Failed to fetch collections');
+    return res.json();
+  },
+
+  async getMarketRates(): Promise<MarketRate[]> {
+    const res = await fetch(`${API_URL}/v1/market-rates`);
+    if (!res.ok) throw new Error('Failed to fetch market rates');
+    return res.json();
+  },
+
+  async searchProduce(query: string): Promise<MarketRate[]> {
+    const res = await fetch(`${API_URL}/v1/market-rates?search=${encodeURIComponent(query)}`);
+    if (!res.ok) throw new Error('Failed to search produce');
+    return res.json();
+  },
+
+  async addMarketRate(rate: Partial<MarketRate>): Promise<MarketRate> {
+    const res = await fetch(`${API_URL}/v1/market-rates`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(rate),
+    });
+    if (!res.ok) throw new Error('Failed to add produce');
+    return res.json();
+  },
+
+  async updateMarketRate(id: string, updates: Partial<MarketRate>): Promise<MarketRate> {
+    const res = await fetch(`${API_URL}/v1/market-rates/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    if (!res.ok) throw new Error('Failed to update produce');
+    return res.json();
+  },
+
+  async deleteMarketRate(id: string): Promise<void> {
+    const res = await fetch(`${API_URL}/v1/market-rates/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete produce');
+  },
+
+  async getHarvestNotices(farmerId: string): Promise<HarvestNotice[]> {
+    const res = await fetch(`${API_URL}/v1/harvest-notices?farmerId=${farmerId}`);
+    if (!res.ok) throw new Error('Failed to fetch harvest notices');
+    return res.json();
+  },
+
+  async getPriceHistory(produceType: string): Promise<PriceHistory[]> {
+    const res = await fetch(`${API_URL}/v1/price-history?produceType=${produceType}`);
+    if (!res.ok) throw new Error('Failed to fetch price history');
+    return res.json();
+  },
+
+  async getAgents(filters?: { region?: string; type?: string }): Promise<Agent[]> {
+    const params = new URLSearchParams();
+    if (filters?.region) params.append('region', filters.region);
+    if (filters?.type) params.append('type', filters.type);
+    const res = await fetch(`${API_URL}/v1/agents?${params.toString()}`);
+    if (!res.ok) throw new Error('Failed to fetch agents');
+    return res.json();
+  },
+
+  async getWastage(): Promise<any[]> {
+    const res = await fetch(`${API_URL}/v1/wastage`);
+    if (!res.ok) throw new Error('Failed to fetch wastage data');
+    return res.json();
+  },
+
+  async getAllCollections(): Promise<ProduceCollection[]> {
+    const res = await fetch(`${API_URL}/v1/collections`);
+    if (!res.ok) throw new Error('Failed to fetch collections');
+    return res.json();
+  },
+
+  async updateCollectionStatus(id: string, status: CollectionStatus): Promise<void> {
+    const res = await fetch(`${API_URL}/v1/collections/${id}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    if (!res.ok) throw new Error('Failed to update collection status');
+  },
+
+  async processBulkPayout(ids: string[]): Promise<void> {
+    const res = await fetch(`${API_URL}/v1/financials/payout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    });
+    if (!res.ok) throw new Error('Failed to process bulk payout');
+  },
+
+  async getLoans(): Promise<Loan[]> {
+    const res = await fetch(`${API_URL}/v1/loans`);
+    if (!res.ok) throw new Error('Failed to fetch loans');
+    return res.json();
+  },
+
+  async updateLoanStatus(id: string, data: { status?: string; remainingBalance?: number }): Promise<void> {
+    const res = await fetch(`${API_URL}/v1/loans/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to update loan status');
   },
 };

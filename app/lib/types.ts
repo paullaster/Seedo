@@ -219,6 +219,32 @@ export interface WastageRecord {
   timestamp: string;
 }
 
+export interface ActivationUserInfo {
+  token: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  userId: string;
+}
+
+export interface Permission {
+  id: string;
+  key: string;
+  name: string;
+  description?: string;
+  created_at: string;
+}
+
+export interface UserPermission {
+  id: string;
+  user_id: string;
+  permission_id: string;
+  value?: string;
+  permissions: Permission;
+  created_at: string;
+}
+
 export function isFarmer(user: User | Farmer | Agent | null): user is Farmer {
   return user !== null && user.role === 'FARMER';
 }

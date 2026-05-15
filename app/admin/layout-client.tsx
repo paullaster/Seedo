@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import { PermissionProvider } from '@/app/lib/permission-context';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
@@ -23,8 +24,10 @@ const adminNavItems = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <DashboardLayout navItems={adminNavItems} role="ADMIN">
-      {children}
-    </DashboardLayout>
+    <PermissionProvider>
+      <DashboardLayout navItems={adminNavItems} role="ADMIN">
+        {children}
+      </DashboardLayout>
+    </PermissionProvider>
   );
 }

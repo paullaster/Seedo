@@ -38,6 +38,7 @@ import {
 } from '@mui/icons-material';
 import { Loan, Farmer } from '@/app/lib/types';
 import { apiService } from '@/app/lib/api-service';
+import { Can } from '@/components/Can';
 
 const LoanManagement = () => {
   const [loans, setLoans] = useState<Loan[]>([]);
@@ -144,10 +145,12 @@ const LoanManagement = () => {
                 <TableCell align="right">
                   <Stack direction="row" spacing={1} justifyContent="flex-end">
                     {loan.status === 'PENDING' && (
-                      <>
-                        <Button size="small" variant="contained" color="success" onClick={() => handleAction(loan.id, 'ACTIVE')}>Approve</Button>
-                        <Button size="small" variant="outlined" color="error" onClick={() => handleAction(loan.id, 'REJECTED')}>Reject</Button>
-                      </>
+                      <Can permission="loans.update">
+                        <>
+                          <Button size="small" variant="contained" color="success" onClick={() => handleAction(loan.id, 'ACTIVE')}>Approve</Button>
+                          <Button size="small" variant="outlined" color="error" onClick={() => handleAction(loan.id, 'REJECTED')}>Reject</Button>
+                        </>
+                      </Can>
                     )}
                     <Tooltip title="View Detailed Ledger">
                       <IconButton size="small" onClick={() => openDetails(loan)}>

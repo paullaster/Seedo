@@ -26,6 +26,7 @@ import {
   ArrowBack,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
+import { Can } from '@/components/Can';
 
 export default function SystemSettings() {
   const router = useRouter();
@@ -50,14 +51,16 @@ export default function SystemSettings() {
             Regulate global guardrails, financial logic, and security protocols.
           </Typography>
         </Box>
-        <Button 
-          variant="contained" 
-          startIcon={<Save />} 
-          onClick={handleSave}
-          sx={{ borderRadius: 4, px: 4, py: 1.5, fontWeight: 'bold' }}
-        >
-          Save Changes
-        </Button>
+        <Can permission="settings.update">
+          <Button 
+            variant="contained" 
+            startIcon={<Save />} 
+            onClick={handleSave}
+            sx={{ borderRadius: 4, px: 4, py: 1.5, fontWeight: 'bold' }}
+          >
+            Save Changes
+          </Button>
+        </Can>
       </Box>
 
       {success && <Alert severity="success" sx={{ mb: 3, borderRadius: 3 }}>System configuration updated successfully!</Alert>}

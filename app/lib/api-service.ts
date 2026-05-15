@@ -1,4 +1,4 @@
-import { FarmerRegistration, AuthResponse, ProduceCollection, MarketRate, HarvestNotice, PriceHistory, CollectionStatus, Loan, Agent } from './types';
+import { FarmerRegistration, AuthResponse, ProduceCollection, MarketRate, HarvestNotice, PriceHistory, CollectionStatus, Loan, Agent, ActivationUserInfo, Permission, UserPermission } from './types';
 
 const getBaseUrl = () => {
   if (typeof window === 'undefined') {
@@ -154,5 +154,87 @@ export const apiService = {
       body: JSON.stringify(data),
     });
     if (!res.ok) throw new Error('Failed to update loan status');
+  },
+
+  // Activation & Admin User Creation
+  async adminCreateUser(data: { firstName: string; lastName: string; email: string; role: string }): Promise<any> {
+    const res = await fetch(`${API_URL}/users/admin-create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Failed to create user' }));
+      throw new Error(err.error || 'Failed to create user');
+    }
+    return res.json();
+  },
+
+  async verifyActivationToken(token: string): Promise<ActivationUserInfo> {
+    const res = await fetch(`${API_URL}/activation/verify-token/${encodeURIComponent(token)}`);
+    if (!res.ok) throw new Error('Invalid or expired activation link');
+    return res.json();
+  },
+
+  async activateAccount(data: { token: string; password: string; phoneNumber?: string; nationalId?: string }): Promise<any> {
+    const res = await fetch(`${API_URL}/activation/activate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Activation failed' }));
+      throw new Error(err.error || 'Activation failed');
+    }
+    return res.json();
+  },
+
+  // Permissions
+  async getPermissions(): Promise<Permission[]> {
+    const res = await fetch(`${API_URL}/permissions`);
+    if (!res.ok) throw new Error('Failed to fetch permissions');
+    return res.json();
+  },
+
+  async createPermission(data: { key: string; name: string; description?: string }): Promise<Permission> {
+    const res = await fetch(`${API_URL}/permissions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Failed to create permission' }));
+      throw new Error(err.error || 'Failed to create permission');
+    }
+    return res.json();
+  },
+
+  async deletePermission(id: string): Promise<void> {
+    const res = await fetch(`${API_URL}/permissions/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete permission');
+  },
+
+  async assignPermissions(userId: string, permissions: { permissionId: string; value?: string }[]): Promise<any> {
+    const res = await fetch(`${API_URL}/permissions/assign`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, permissions }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Failed to assign permissions' }));
+      throw new Error(err.error || 'Failed to assign permissions');
+    }
+    return res.json();
+  },
+
+  async getUserPermissions(userId: string): Promise<UserPermission[]> {
+    const res = await fetch(`${API_URL}/permissions/user/${userId}`);
+    if (!res.ok) throw new Error('Failed to fetch user permissions');
+    return res.json();
+  },
+
+  async removeUserPermission(userId: string, permissionId: string): Promise<void> {
+    const res = await fetch(`${API_URL}/permissions/user/${userId}?permissionId=${permissionId}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to remove permission');
   },
 };

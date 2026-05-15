@@ -6,6 +6,7 @@ import {
 import { Add, Edit, Delete, TrendingUp, TrendingDown, ArrowBack, Category } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import type { MarketRate } from '@/app/lib/types';
+import { Can } from '@/components/Can';
 
 export default function MarketsManagementView({ initialRates, fetchError }: { initialRates: MarketRate[]; fetchError?: string | null }) {
   const router = useRouter();
@@ -75,9 +76,11 @@ export default function MarketsManagementView({ initialRates, fetchError }: { in
           <Typography variant="h3" fontWeight="900" gutterBottom sx={{ letterSpacing: -1 }}>Market Controls</Typography>
           <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 'medium' }}>Manage accepted produce and regulate buying prices.</Typography>
         </Box>
-        <Button variant="contained" size="large" startIcon={<Add />} onClick={() => handleOpen()} sx={{ borderRadius: 4, px: 4, py: 1.5, fontWeight: 'bold' }}>
-          Add New Produce
-        </Button>
+        <Can permission="produce.markets.create">
+          <Button variant="contained" size="large" startIcon={<Add />} onClick={() => handleOpen()} sx={{ borderRadius: 4, px: 4, py: 1.5, fontWeight: 'bold' }}>
+            Add New Produce
+          </Button>
+        </Can>
       </Box>
 
       {error && <Alert severity="error" sx={{ mb: 3, borderRadius: 3 }}>{error}</Alert>}
@@ -93,8 +96,12 @@ export default function MarketsManagementView({ initialRates, fetchError }: { in
                   <Typography variant="caption" color="text.secondary">Last Updated: {new Date(rate.lastUpdated).toLocaleDateString()}</Typography>
                 </Box>
                 <Stack direction="row" spacing={1}>
-                  <IconButton size="small" onClick={() => handleOpen(rate)} color="primary"><Edit fontSize="small" /></IconButton>
-                  <IconButton size="small" onClick={() => handleDelete(rate.id)} color="error"><Delete fontSize="small" /></IconButton>
+                  <Can permission="produce.markets.update">
+                    <IconButton size="small" onClick={() => handleOpen(rate)} color="primary"><Edit fontSize="small" /></IconButton>
+                  </Can>
+                  <Can permission="produce.markets.delete">
+                    <IconButton size="small" onClick={() => handleDelete(rate.id)} color="error"><Delete fontSize="small" /></IconButton>
+                  </Can>
                 </Stack>
               </Stack>
               {rate.category && (

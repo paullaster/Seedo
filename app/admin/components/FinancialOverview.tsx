@@ -34,6 +34,7 @@ import {
 } from '@mui/icons-material';
 import { ProduceCollection, CollectionStatus } from '@/app/lib/types';
 import { apiService } from '@/app/lib/api-service';
+import { Can } from '@/components/Can';
 
 const FinancialOverview = () => {
   const [collections, setCollections] = useState<ProduceCollection[]>([]);
@@ -110,15 +111,17 @@ const FinancialOverview = () => {
           <Typography variant="body2" color="text.secondary">Validate produce deliveries and process bank disbursements.</Typography>
         </Box>
         {selected.length > 0 && (
-          <Button
-            variant="contained"
-            size="large"
-            startIcon={<AccountBalance />}
-            onClick={handleBulkPayout}
-            sx={{ borderRadius: 3, fontWeight: 'bold', py: 1.5, px: 4 }}
-          >
-            Disburse KES {totalAmount.toLocaleString()} ({selected.length})
-          </Button>
+          <Can permission="financials.payouts.process">
+            <Button
+              variant="contained"
+              size="large"
+              startIcon={<AccountBalance />}
+              onClick={handleBulkPayout}
+              sx={{ borderRadius: 3, fontWeight: 'bold', py: 1.5, px: 4 }}
+            >
+              Disburse KES {totalAmount.toLocaleString()} ({selected.length})
+            </Button>
+          </Can>
         )}
       </Stack>
 
@@ -169,11 +172,13 @@ const FinancialOverview = () => {
                 <TableCell align="right">
                   <Stack direction="row" spacing={1} justifyContent="flex-end">
                     {row.status === 'PENDING' && (
-                      <Tooltip title="Validate Invoice">
-                        <IconButton size="small" color="success" onClick={() => handleValidate(row.id)}>
-                          <ThumbUp fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      <Can permission="collections.status">
+                        <Tooltip title="Validate Invoice">
+                          <IconButton size="small" color="success" onClick={() => handleValidate(row.id)}>
+                            <ThumbUp fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Can>
                     )}
                     <Tooltip title="Forensic Drill-Down">
                       <IconButton size="small" onClick={() => handleDrillDown(row)}>

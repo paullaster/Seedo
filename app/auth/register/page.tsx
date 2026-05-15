@@ -28,7 +28,7 @@ export default function RegisterPage() {
   const [produceSearchLoading, setProduceSearchLoading] = useState(false);
   const [produceInput, setProduceInput] = useState('');
   const [selectedProduce, setSelectedProduce] = useState<MarketRate | null>(null);
-  const produceSearchRef = useRef<ReturnType<typeof setTimeout>>();
+  const produceSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -259,7 +259,9 @@ export default function RegisterPage() {
               fullWidth required 
               value={formData.otp}
               onChange={(e) => setFormData({ ...formData, otp: e.target.value })}
-              inputProps={{ maxLength: 6, style: { textAlign: 'center', letterSpacing: '8px', fontSize: '24px' } }}
+              slotProps={{
+                htmlInput: {maxLength: 6, style: {textAlign: 'center', letterSpacing: '8px', fontSize: '24px' } }
+              }}
             />
             <Button size="small" onClick={() => setActiveStep(0)}>Change Phone Number</Button>
           </Stack>

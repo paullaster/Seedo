@@ -43,21 +43,22 @@ export async function POST(request: Request) {
     }
 
     const nameParts = (body.name || '').split(' ');
+    const role: string = body.role || 'FARMER';
     const payload = {
-      first_name: nameParts[0] || 'Farmer',
-      last_name: nameParts.slice(1).join(' ') || 'User',
+      firstName: nameParts[0] || 'Farmer',
+      lastName: nameParts.slice(1).join(' ') || 'User',
       email: body.email,
-      phone_number: body.phone,
-      national_id: body.nationalId || '',
+      phoneNumber: body.phone,
+      nationalId: body.nationalId,
       password,
-      role: 'FARMER',
-      auth_provider: authProvider,
-      location_lat: body.location?.lat,
-      location_lng: body.location?.lng,
-      location_address: body.location?.address,
+      role,
+      authProvider,
+      locationLat: body.location?.lat,
+      locationLng: body.location?.lng,
+      locationAddress: body.location?.address,
     };
 
-    const result = await bffPost('/users/create', payload);
+    const result = await bffPost('/users/register', payload);
 
     const loginResult = await bffPost<{ accessToken: string; userId: string }>('/auth/login', {
       username: body.phone,

@@ -2,11 +2,13 @@ import { Suspense } from 'react';
 import { Box, Typography, Container, Button } from '@mui/material';
 import { ArrowBack } from '@mui/icons-material';
 import Link from 'next/link';
-import WastageHeatmap, { WastageHeatmapSkeleton } from '../components/WastageHeatmap';
-import { getWastageRecords } from './actions';
+import { getWarehouses } from './actions';
+import WarehousesView from './WarehousesView';
 
-export default async function WastagePage() {
-  const recordsPromise = getWastageRecords();
+export default function WarehousesPage() {
+  const dataPromise = getWarehouses()
+    .then(data => ({ data, error: null as string | null }))
+    .catch(err => ({ data: null as any, error: err instanceof Error ? err.message : 'Failed to load warehouses' }));
 
   return (
     <Container maxWidth="lg" sx={{ py: 4, pb: 10 }}>
@@ -15,14 +17,14 @@ export default async function WastagePage() {
           Dashboard
         </Button>
         <Typography variant="h3" fontWeight="900" gutterBottom sx={{ letterSpacing: -1 }}>
-          Wastage Tracker
+          Warehouse Management
         </Typography>
         <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 'medium' }}>
-          Monitor shrinkage across collection hubs and stores.
+          Manage warehouses, bins, and sub-bin storage locations.
         </Typography>
       </Box>
-      <Suspense fallback={<WastageHeatmapSkeleton />}>
-        <WastageHeatmap recordsPromise={recordsPromise} />
+      <Suspense fallback={<Typography>Loading...</Typography>}>
+        <WarehousesView dataPromise={dataPromise} />
       </Suspense>
     </Container>
   );

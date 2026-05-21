@@ -5,16 +5,20 @@ import {
   Alert, Link as MuiLink, Divider, Stack 
 } from '@mui/material';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import GoogleIcon from '@mui/icons-material/Google';
 import Link from 'next/link';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [identity, setIdentity] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const redirect = searchParams.get('redirect');
+  const isAdminLogin = redirect === '/admin';
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,12 +33,16 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
+        console.error("[ERROR RESPONSE HANDLE LOGIN] ", result.error);
+        
         setError('Invalid identity or password. Please try again.');
       } else {
         router.push('/'); 
         router.refresh();
       }
     } catch (err) {
+      console.error("[HANDLE LOGIN ERROR] ", err);
+      
       setError('An error occurred during sign in.');
     } finally {
       setLoading(false);
@@ -49,7 +57,9 @@ export default function LoginPage() {
     <Container maxWidth="sm" sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <Paper sx={{ p: 4, width: '100%', borderRadius: 4, bgcolor: 'background.paper', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
         <Typography variant="h4" fontWeight="900" gutterBottom align="center" color="primary" sx={{ letterSpacing: -1 }}>
-          AgriCollect
+          <MuiLink component={Link} href="/" underline="none" color="primary">
+            AgriCollect
+          </MuiLink>
         </Typography>
         <Typography variant="body1" align="center" color="text.secondary" mb={4} sx={{ fontWeight: 500 }}>
           Secure Login Access
@@ -97,34 +107,41 @@ export default function LoginPage() {
             {loading ? 'Authenticating...' : 'Login to Dashboard'}
           </Button>
         </Box>
+        {
+          !isAdminLogin &&
+          (
+            <>
+              <Box sx={{ my: 4 }}>
+                <Divider>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold', textTransform: 'uppercase' }}>External Access</Typography>
+                </Divider>
+              </Box>
 
-        <Box sx={{ my: 4 }}>
-          <Divider>
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold', textTransform: 'uppercase' }}>External Access</Typography>
-          </Divider>
-        </Box>
+              <Stack spacing={2}>
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  size="large"
+                  startIcon={<GoogleIcon />}
+                  onClick={handleGoogleSignIn}
+                  sx={{ height: 56, borderRadius: 3, borderColor: 'rgba(255,255,255,0.2)', color: 'text.primary', fontWeight: 'bold' }}
+                >
+                  Continue with Google
+                </Button>
 
-        <Stack spacing={2}>
-          <Button
-            variant="outlined"
-            fullWidth
-            size="large"
-            startIcon={<GoogleIcon />}
-            onClick={handleGoogleSignIn}
-            sx={{ height: 56, borderRadius: 3, borderColor: 'rgba(255,255,255,0.2)', color: 'text.primary', fontWeight: 'bold' }}
-          >
-            Continue with Google
-          </Button>
-
-          <Box textAlign="center" mt={2}>
-            <Typography variant="body2" color="text.secondary">
-              Need a new account?{' '}
-              <Link href="/auth/register" passHref legacyBehavior>
-                <MuiLink color="secondary" fontWeight="900" sx={{ textDecoration: 'none' }}>Register Here</MuiLink>
-              </Link>
-            </Typography>
-          </Box>
-        </Stack>
+                <Box textAlign="center" mt={2}>
+                  <Typography variant="body2" color="text.secondary">
+                    Need a new account?{' '}
+                    <Link href="/auth/register" passHref>
+                      <MuiLink color="secondary" fontWeight="900" sx={{ textDecoration: 'none' }}>Register Here</MuiLink>
+                    </Link>
+                  </Typography>
+                </Box>
+              </Stack>
+            </>
+           )
+}
+          
       </Paper>
     </Container>
   );

@@ -5,7 +5,6 @@ import {
   Skeleton,
   Grid,
   Stack,
-  Typography,
 } from '@mui/material';
 
 export default function DiscoveryLoading() {

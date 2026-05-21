@@ -50,7 +50,7 @@ export default function Home() {
       subtitle: 'Control & Analytics',
       description: 'System-wide oversight, user management, and advanced reporting metrics.',
       icon: <AdminPanelSettingsIcon sx={{ fontSize: 60 }} />,
-      color: '#FF4081', // Pink/Red neon for admin
+      color: '#FF4081',
       path: '/admin',
       badge: 'SYSTEM'
     },

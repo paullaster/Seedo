@@ -1,31 +1,30 @@
 'use client';
 
-import React from 'react';
-import { Box, Grid, Typography, Card, CardContent, alpha, useTheme } from '@mui/material';
+import React, { use } from 'react';
+import { Box, Grid, Typography, Card, CardContent, alpha } from '@mui/material';
 import {
-  TrendingUp,
-  TrendingDown,
   Group,
   AccountBalanceWallet,
   Inventory,
   Warning,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import type { DashboardStat } from '@/app/admin/stats/actions';
 
-const stats = [
-  { label: 'Total Tonnage (Maize)', value: '142.5 Tons', trend: '+12%', icon: <Inventory />, color: '#2e7d32' },
-  { label: 'Active Loans', value: 'KES 1.2M', trend: '+5%', icon: <AccountBalanceWallet />, color: '#1976d2' },
-  { label: 'Total Farmers', value: '1,240', trend: '+20%', icon: <Group />, color: '#ef6c00' },
-  { label: 'System Wastage', value: '2.4%', trend: '-1.5%', icon: <Warning />, color: '#c62828' },
-];
+const iconMap: Record<string, React.ReactNode> = {
+  tonnage: <Inventory />,
+  loans: <AccountBalanceWallet />,
+  farmers: <Group />,
+  wastage: <Warning />,
+};
 
-const AdminStats = () => {
-  const theme = useTheme();
+const AdminStats = ({ statsPromise }: { statsPromise: Promise<DashboardStat[]> }) => {
+  const stats = use(statsPromise);
 
   return (
     <Grid container spacing={3}>
       {stats.map((stat, idx) => (
-        <Grid size={{ xs: 12, sm: 6, md: 3 }} key={idx}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.key}>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -35,7 +34,7 @@ const AdminStats = () => {
               <CardContent sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                   <Box sx={{ p: 1.5, borderRadius: 3, bgcolor: alpha(stat.color, 0.1), color: stat.color }}>
-                    {stat.icon}
+                    {iconMap[stat.key]}
                   </Box>
                   <Typography
                     variant="caption"
@@ -65,5 +64,22 @@ const AdminStats = () => {
     </Grid>
   );
 };
+
+export function AdminStatsSkeleton() {
+  return (
+    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 3 }}>
+      {Array.from({ length: 4 }).map((_, i) => (
+        <Box key={i} sx={{ p: 3, borderRadius: 4, border: '1px solid #eee' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Box sx={{ width: 44, height: 44, borderRadius: 3, bgcolor: '#e0e0e0' }} />
+            <Box sx={{ width: 60, height: 24, borderRadius: 1, bgcolor: '#e0e0e0' }} />
+          </Box>
+          <Box sx={{ width: '50%', height: 40, bgcolor: '#e0e0e0', borderRadius: 1, mb: 0.5 }} />
+          <Box sx={{ width: '70%', height: 20, bgcolor: '#f0f0f0', borderRadius: 1 }} />
+        </Box>
+      ))}
+    </Box>
+  );
+}
 
 export default AdminStats;

@@ -1,40 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { use } from 'react';
 import { Box, Typography, Paper, Grid, alpha, Stack, LinearProgress } from '@mui/material';
 import { Warning, Store } from '@mui/icons-material';
+import type { WastageRecord } from '@/app/lib/types';
 
-interface WastageRecord {
-  storeId: string;
-  produceType: string;
-  intakeWeight: number;
-  warehouseWeight: number;
-  shrinkagePercentage: number;
-  timestamp: string;
-}
-
-const WastageHeatmap = () => {
-  const [records, setRecords] = useState<WastageRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch('/api/wastage')
-      .then(res => res.ok ? res.json() : [])
-      .then(data => { setRecords(Array.isArray(data) ? data : []); })
-      .catch(() => { setRecords([]); })
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) {
-    return (
-      <Box>
-        <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Warning color="error" /> Loss Prevention & Wastage
-        </Typography>
-        <Typography variant="body2" color="text.secondary">Loading wastage data...</Typography>
-      </Box>
-    );
-  }
+const WastageHeatmap = ({ recordsPromise }: { recordsPromise: Promise<WastageRecord[]> }) => {
+  const records = use(recordsPromise);
 
   return (
     <Box>
@@ -42,7 +14,7 @@ const WastageHeatmap = () => {
         <Warning color="error" /> Loss Prevention & Wastage
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-        Tracking "The Black Hole": Intake Weight vs. Warehouse Delivery.
+        Tracking &quot;The Black Hole&quot;: Intake Weight vs. Warehouse Delivery.
       </Typography>
 
       <Grid container spacing={3}>
@@ -99,5 +71,43 @@ const WastageHeatmap = () => {
     </Box>
   );
 };
+
+export function WastageHeatmapSkeleton() {
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+        <Box sx={{ width: 28, height: 28, borderRadius: 1, bgcolor: '#e0e0e0' }} />
+        <Box sx={{ width: 280, height: 32, borderRadius: 1, bgcolor: '#e0e0e0' }} />
+      </Box>
+      <Box sx={{ width: 440, height: 20, borderRadius: 1, bgcolor: '#f0f0f0', mb: 4 }} />
+      <Grid container spacing={3}>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Grid size={{ xs: 12, md: 6 }} key={i}>
+            <Box sx={{ p: 3, borderRadius: 4, border: '1px solid #eee' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 20, height: 20, borderRadius: 1, bgcolor: '#f0f0f0' }} />
+                  <Box sx={{ width: 140, height: 24, borderRadius: 1, bgcolor: '#e0e0e0' }} />
+                </Box>
+                <Box sx={{ width: 100, height: 28, borderRadius: 1, bgcolor: '#e0e0e0' }} />
+              </Box>
+              <Stack spacing={1.5} sx={{ mb: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Box sx={{ width: 100, height: 16, borderRadius: 1, bgcolor: '#f0f0f0' }} />
+                  <Box sx={{ width: 80, height: 16, borderRadius: 1, bgcolor: '#e0e0e0' }} />
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Box sx={{ width: 110, height: 16, borderRadius: 1, bgcolor: '#f0f0f0' }} />
+                  <Box sx={{ width: 80, height: 16, borderRadius: 1, bgcolor: '#e0e0e0' }} />
+                </Box>
+              </Stack>
+              <Box sx={{ width: '100%', height: 10, borderRadius: 5, bgcolor: '#f0f0f0' }} />
+            </Box>
+          </Grid>
+        ))}
+      </Grid>
+    </Box>
+  );
+}
 
 export default WastageHeatmap;

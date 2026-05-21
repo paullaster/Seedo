@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, use } from 'react';
 import {
   Container, Box, Typography, Paper, Grid, Button, TextField, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Stack, InputAdornment, Chip, Alert, CircularProgress, MenuItem,
 } from '@mui/material';
@@ -8,7 +8,8 @@ import { useRouter } from 'next/navigation';
 import type { MarketRate } from '@/app/lib/types';
 import { Can } from '@/components/Can';
 
-export default function MarketsManagementView({ initialRates, fetchError }: { initialRates: MarketRate[]; fetchError?: string | null }) {
+export default function MarketsManagementView({ ratesPromise }: { ratesPromise: Promise<{ rates: MarketRate[]; error: string | null }> }) {
+  const { rates: initialRates, error: fetchError } = use(ratesPromise);
   const router = useRouter();
   const [rates, setRates] = useState<MarketRate[]>(initialRates);
   const [loading, setLoading] = useState(false);

@@ -1,18 +1,25 @@
 import { FarmerRegistration, AuthResponse, ProduceCollection, MarketRate, HarvestNotice, PriceHistory, CollectionStatus, Loan, Agent, ActivationUserInfo, Permission, UserPermission } from './types';
+import { signOut } from 'next-auth/react';
 
-const getBaseUrl = () => {
-  if (typeof window === 'undefined') {
-    throw new Error('Browser window not set.');
+const API_URL = '/api';
+
+async function apiFetch(url: string, options?: RequestInit): Promise<Response> {
+  const res = await fetch(url, options);
+
+  if (res.status === 401 || res.status === 403) {
+    try {
+      await signOut({ redirect: true, callbackUrl: '/auth/login' });
+    } catch {
+    }
+    throw new Error('Session expired');
   }
-  if (process.env.NEXT_PUBLIC_API_URL) return `${process.env.NEXT_PUBLIC_API_URL}/api`;
-  return '/api';
-};
 
-const API_URL = getBaseUrl();
+  return res;
+}
 
 export const apiService = {
   async sendOTP(identity: string): Promise<{ success: boolean; message: string }> {
-    const res = await fetch(`${API_URL}/v1/otp/send`, {
+    const res = await apiFetch(`${API_URL}/v1/otp/send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ identity }),
@@ -22,7 +29,7 @@ export const apiService = {
   },
 
   async verifyOTP(identity: string, code: string): Promise<boolean> {
-    const res = await fetch(`${API_URL}/v1/otp/verify`, {
+    const res = await apiFetch(`${API_URL}/v1/otp/verify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ identity, code }),
@@ -33,7 +40,7 @@ export const apiService = {
   },
 
   async registerFarmer(data: FarmerRegistration): Promise<AuthResponse> {
-    const res = await fetch(`${API_URL}/v1/users/register`, {
+    const res = await apiFetch(`${API_URL}/v1/users/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -48,25 +55,25 @@ export const apiService = {
   },
 
   async getFarmerCollections(farmerId: string): Promise<ProduceCollection[]> {
-    const res = await fetch(`${API_URL}/v1/collections?farmerId=${farmerId}`);
+    const res = await apiFetch(`${API_URL}/v1/collections?farmerId=${farmerId}`);
     if (!res.ok) throw new Error('Failed to fetch collections');
     return res.json();
   },
 
   async getMarketRates(): Promise<MarketRate[]> {
-    const res = await fetch(`${API_URL}/v1/market-rates`);
+    const res = await apiFetch(`${API_URL}/v1/market-rates`);
     if (!res.ok) throw new Error('Failed to fetch market rates');
     return res.json();
   },
 
   async searchProduce(query: string): Promise<MarketRate[]> {
-    const res = await fetch(`${API_URL}/v1/market-rates?search=${encodeURIComponent(query)}`);
+    const res = await apiFetch(`${API_URL}/v1/market-rates?search=${encodeURIComponent(query)}`);
     if (!res.ok) throw new Error('Failed to search produce');
     return res.json();
   },
 
   async addMarketRate(rate: Partial<MarketRate>): Promise<MarketRate> {
-    const res = await fetch(`${API_URL}/v1/market-rates`, {
+    const res = await apiFetch(`${API_URL}/v1/market-rates`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(rate),
@@ -76,7 +83,7 @@ export const apiService = {
   },
 
   async updateMarketRate(id: string, updates: Partial<MarketRate>): Promise<MarketRate> {
-    const res = await fetch(`${API_URL}/v1/market-rates/${id}`, {
+    const res = await apiFetch(`${API_URL}/v1/market-rates/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
@@ -86,18 +93,18 @@ export const apiService = {
   },
 
   async deleteMarketRate(id: string): Promise<void> {
-    const res = await fetch(`${API_URL}/v1/market-rates/${id}`, { method: 'DELETE' });
+    const res = await apiFetch(`${API_URL}/v1/market-rates/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete produce');
   },
 
   async getHarvestNotices(farmerId: string): Promise<HarvestNotice[]> {
-    const res = await fetch(`${API_URL}/v1/harvest-notices?farmerId=${farmerId}`);
+    const res = await apiFetch(`${API_URL}/v1/harvest-notices?farmerId=${farmerId}`);
     if (!res.ok) throw new Error('Failed to fetch harvest notices');
     return res.json();
   },
 
   async getPriceHistory(produceType: string): Promise<PriceHistory[]> {
-    const res = await fetch(`${API_URL}/v1/price-history?produceType=${produceType}`);
+    const res = await apiFetch(`${API_URL}/v1/price-history?produceType=${produceType}`);
     if (!res.ok) throw new Error('Failed to fetch price history');
     return res.json();
   },
@@ -106,25 +113,25 @@ export const apiService = {
     const params = new URLSearchParams();
     if (filters?.region) params.append('region', filters.region);
     if (filters?.type) params.append('type', filters.type);
-    const res = await fetch(`${API_URL}/v1/agents?${params.toString()}`);
+    const res = await apiFetch(`${API_URL}/v1/agents?${params.toString()}`);
     if (!res.ok) throw new Error('Failed to fetch agents');
     return res.json();
   },
 
   async getWastage(): Promise<any[]> {
-    const res = await fetch(`${API_URL}/v1/wastage`);
+    const res = await apiFetch(`${API_URL}/v1/wastage`);
     if (!res.ok) throw new Error('Failed to fetch wastage data');
     return res.json();
   },
 
   async getAllCollections(): Promise<ProduceCollection[]> {
-    const res = await fetch(`${API_URL}/v1/collections`);
+    const res = await apiFetch(`${API_URL}/v1/collections`);
     if (!res.ok) throw new Error('Failed to fetch collections');
     return res.json();
   },
 
   async updateCollectionStatus(id: string, status: CollectionStatus): Promise<void> {
-    const res = await fetch(`${API_URL}/v1/collections/${id}/status`, {
+    const res = await apiFetch(`${API_URL}/v1/collections/${id}/status`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
@@ -133,7 +140,7 @@ export const apiService = {
   },
 
   async processBulkPayout(ids: string[]): Promise<void> {
-    const res = await fetch(`${API_URL}/v1/financials/payout`, {
+    const res = await apiFetch(`${API_URL}/v1/financials/payout`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ids }),
@@ -142,13 +149,13 @@ export const apiService = {
   },
 
   async getLoans(): Promise<Loan[]> {
-    const res = await fetch(`${API_URL}/v1/loans`);
+    const res = await apiFetch(`${API_URL}/v1/loans`);
     if (!res.ok) throw new Error('Failed to fetch loans');
     return res.json();
   },
 
   async updateLoanStatus(id: string, data: { status?: string; remainingBalance?: number }): Promise<void> {
-    const res = await fetch(`${API_URL}/v1/loans/${id}`, {
+    const res = await apiFetch(`${API_URL}/v1/loans/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -158,7 +165,7 @@ export const apiService = {
 
   // Activation & Admin User Creation
   async adminCreateUser(data: { firstName: string; lastName: string; email: string; role: string }): Promise<any> {
-    const res = await fetch(`${API_URL}/users/admin-create`, {
+    const res = await apiFetch(`${API_URL}/users/admin-create`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -171,13 +178,13 @@ export const apiService = {
   },
 
   async verifyActivationToken(token: string): Promise<ActivationUserInfo> {
-    const res = await fetch(`${API_URL}/activation/verify-token/${encodeURIComponent(token)}`);
+    const res = await apiFetch(`${API_URL}/activation/verify-token/${encodeURIComponent(token)}`);
     if (!res.ok) throw new Error('Invalid or expired activation link');
     return res.json();
   },
 
   async activateAccount(data: { token: string; password: string; phoneNumber?: string; nationalId?: string }): Promise<any> {
-    const res = await fetch(`${API_URL}/activation/activate`, {
+    const res = await apiFetch(`${API_URL}/activation/activate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -191,13 +198,13 @@ export const apiService = {
 
   // Permissions
   async getPermissions(): Promise<Permission[]> {
-    const res = await fetch(`${API_URL}/permissions`);
+    const res = await apiFetch(`${API_URL}/permissions`);
     if (!res.ok) throw new Error('Failed to fetch permissions');
     return res.json();
   },
 
   async createPermission(data: { key: string; name: string; description?: string }): Promise<Permission> {
-    const res = await fetch(`${API_URL}/permissions`, {
+    const res = await apiFetch(`${API_URL}/permissions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -210,12 +217,12 @@ export const apiService = {
   },
 
   async deletePermission(id: string): Promise<void> {
-    const res = await fetch(`${API_URL}/permissions/${id}`, { method: 'DELETE' });
+    const res = await apiFetch(`${API_URL}/permissions/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete permission');
   },
 
   async assignPermissions(userId: string, permissions: { permissionId: string; value?: string }[]): Promise<any> {
-    const res = await fetch(`${API_URL}/permissions/assign`, {
+    const res = await apiFetch(`${API_URL}/permissions/assign`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, permissions }),
@@ -228,13 +235,14 @@ export const apiService = {
   },
 
   async getUserPermissions(userId: string): Promise<UserPermission[]> {
-    const res = await fetch(`${API_URL}/permissions/user/${userId}`);
+    const res = await apiFetch(`${API_URL}/permissions/user/${userId}`);
     if (!res.ok) throw new Error('Failed to fetch user permissions');
-    return res.json();
+    const data = await res.json();
+    return data.data;
   },
 
   async removeUserPermission(userId: string, permissionId: string): Promise<void> {
-    const res = await fetch(`${API_URL}/permissions/user/${userId}?permissionId=${permissionId}`, { method: 'DELETE' });
+    const res = await apiFetch(`${API_URL}/permissions/user/${userId}?permissionId=${permissionId}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to remove permission');
   },
 };

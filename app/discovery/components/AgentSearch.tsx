@@ -9,7 +9,6 @@ import {
   Button,
   Stack,
   Chip,
-  Paper,
 } from '@mui/material';
 import {
   Search,
@@ -25,9 +24,8 @@ interface AgentSearchProps {
   onFilterProduce: (produce: string | null) => void;
   mode: 'STORE' | 'COLLECTION';
   selectedProduce: string | null;
+  produceTypes: string[];
 }
-
-const PRODUCE_TYPES = ['Maize', 'Wheat', 'Beans', 'Rice', 'Sorghum', 'Barley'];
 
 const AgentSearch: React.FC<AgentSearchProps> = ({
   onSearch,
@@ -35,6 +33,7 @@ const AgentSearch: React.FC<AgentSearchProps> = ({
   onFilterProduce,
   mode,
   selectedProduce,
+  produceTypes,
 }) => {
   const [query, setQuery] = useState('');
 
@@ -46,7 +45,6 @@ const AgentSearch: React.FC<AgentSearchProps> = ({
 
   return (
     <Box sx={{ mb: 4 }}>
-      {/* 1. Dual Mode Toggle */}
       <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
         <Button
           fullWidth
@@ -84,44 +82,38 @@ const AgentSearch: React.FC<AgentSearchProps> = ({
         </Button>
       </Stack>
 
-      {/* 2. Multimodal Search Bar */}
       <Box sx={{ position: 'relative' }}>
         <TextField
           fullWidth
           placeholder={mode === 'STORE' ? "Type Store Name or Town..." : "Type Agent Name or ID..."}
           value={query}
           onChange={handleQueryChange}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search sx={{ fontSize: 32, color: 'primary.main', ml: 1 }} />
-              </InputAdornment>
-            ),
-            endAdornment: (
-              <InputAdornment position="end">
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  startIcon={<MyLocation />}
-                  sx={{ 
-                    borderRadius: 4, 
-                    mr: -0.5, 
-                    py: 1.5, 
-                    px: 3,
-                    fontWeight: 'bold',
-                    boxShadow: '0 4px 12px rgba(255, 160, 0, 0.4)'
-                  }}
-                >
-                  Find Near Me
-                </Button>
-              </InputAdornment>
-            ),
+          slotProps={{
+            input: {
+              startAdornment: <Search sx={{ fontSize: 32, color: 'primary.main', ml: 1 }} />,
+              endAdornment: <Button
+                variant="contained"
+                color="secondary"
+                startIcon={<MyLocation />}
+                sx={{
+                  borderRadius: 4,
+                  mr: 0.5,
+                  py: 1.5,
+                  px: 3,
+                  fontWeight: 'bold',
+                  boxShadow: '0 4px 12px rgba(255, 160, 0, 0.4)'
+                }}
+              >
+                Find Near Me
+              </Button>
+            }
           }}
           sx={{
             '& .MuiOutlinedInput-root': {
               borderRadius: 6,
               height: 80,
               fontSize: '1.25rem',
+              color: 'black',
               bgcolor: 'white',
               boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
               '& fieldset': { border: '1px solid rgba(0,0,0,0.05)' },
@@ -134,7 +126,6 @@ const AgentSearch: React.FC<AgentSearchProps> = ({
         </Typography>
       </Box>
 
-      {/* 3. Visual Filters (Chips) */}
       <Box sx={{ mt: 4, overflowX: 'auto', pb: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
         <Typography variant="subtitle2" fontWeight="900" sx={{ color: 'text.secondary', whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: 1 }}>
           Filter by Crop:
@@ -147,7 +138,7 @@ const AgentSearch: React.FC<AgentSearchProps> = ({
             color={selectedProduce === null ? 'primary' : 'default'}
             sx={{ px: 2, py: 3, borderRadius: 4, fontSize: '1rem', fontWeight: 'bold' }}
           />
-          {PRODUCE_TYPES.map((type) => (
+          {produceTypes.map((type) => (
             <Chip
               key={type}
               label={type}

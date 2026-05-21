@@ -2,7 +2,19 @@ import { NextResponse } from 'next/server';
 import { bffGet, bffPost, BffError } from '@/app/lib/bff';
 import type { MarketRate } from '@/app/lib/types';
 
-function translateProduceToMarketRate(item: any): MarketRate {
+export interface Produce {
+  id: string;
+  name: string;
+  trend: 'UP' | 'DOWN'
+  category: string;
+  rate: string;
+  estimated_require_quantity?: number;
+  created_at: string;
+  updated_at?: string;
+  unit_of_measurement: string;
+}
+
+function translateProduceToMarketRate(item: Produce): MarketRate {
   return {
     id: item.id,
     produceType: item.name,

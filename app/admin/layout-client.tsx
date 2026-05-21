@@ -10,6 +10,11 @@ import ShowChartIcon from '@mui/icons-material/ShowChart';
 import ConstructionIcon from '@mui/icons-material/Construction';
 import SettingsIcon from '@mui/icons-material/Settings';
 import WarningIcon from '@mui/icons-material/Warning';
+import LocalShippingIcon from '@mui/icons-material/LocalShipping';
+import WarehouseIcon from '@mui/icons-material/Warehouse';
+import InventoryIcon from '@mui/icons-material/Inventory';
+import DescriptionIcon from '@mui/icons-material/Description';
+import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
 
 const adminNavItems = [
   { title: 'Command Center', path: '/admin', icon: <DashboardIcon /> },
@@ -20,6 +25,11 @@ const adminNavItems = [
   { title: 'Operations Center', path: '/admin/operations', icon: <ConstructionIcon /> },
   { title: 'Wastage Tracker', path: '/admin/wastage', icon: <WarningIcon /> },
   { title: 'System Settings', path: '/admin/settings', icon: <SettingsIcon /> },
+  { title: 'Pickup Requests', path: '/admin/pickup-requests', icon: <LocalShippingIcon /> },
+  { title: 'Warehouses', path: '/admin/warehouses', icon: <WarehouseIcon /> },
+  { title: 'Batches', path: '/admin/batches', icon: <InventoryIcon /> },
+  { title: 'Delivery Notes', path: '/admin/delivery-notes', icon: <DescriptionIcon /> },
+  { title: 'Number Series', path: '/admin/number-series', icon: <FormatListNumberedIcon /> },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

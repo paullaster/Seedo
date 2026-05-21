@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, use } from 'react';
 import {
   Container,
   Box,
@@ -17,10 +17,15 @@ import AgentDetailDrawer from './AgentDetailDrawer';
 import type { Agent } from '@/app/lib/types';
 
 interface DiscoveryClientProps {
-  initialAgents: Agent[];
+  agentsPromise: Promise<Agent[]>;
+  producePromise: Promise<string[]>;
 }
 
-export default function DiscoveryClient({ initialAgents }: DiscoveryClientProps) {
+export default function DiscoveryClient({ agentsPromise, producePromise }: DiscoveryClientProps) {
+  const allAgents = use(agentsPromise);
+  const produceTypes = use(producePromise);
+  const agents = allAgents.filter(a => a.isVerified);
+
   const [mode, setMode] = useState<'STORE' | 'COLLECTION'>('STORE');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProduce, setSelectedProduce] = useState<string | null>(null);
@@ -29,38 +34,30 @@ export default function DiscoveryClient({ initialAgents }: DiscoveryClientProps)
   const [isLoading, setIsLoading] = useState(false);
 
   const filteredAgents = useMemo(() => {
-    return initialAgents.filter((agent) => {
-      // 1. Filter by Mode
+    return agents.filter((agent) => {
       if (agent.agentType !== mode) return false;
-
-      // 2. Filter by Produce
       if (selectedProduce && !agent.acceptedProduce?.includes(selectedProduce)) return false;
-
-      // 3. Filter by Search Query (ID Search Logic)
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        // Priority ID match
         if (/^\d{7,10}$/.test(query)) {
           return agent.nationalId?.includes(query);
         }
-        // General search
         return (
           agent.name.toLowerCase().includes(query) ||
           agent.location.address.toLowerCase().includes(query) ||
           agent.id.toLowerCase().includes(query)
         );
       }
-
       return true;
     });
-  }, [mode, searchQuery, selectedProduce]);
+  }, [mode, searchQuery, selectedProduce, agents]);
 
   const handleAgentSelect = (agent: Agent) => {
     setSelectedAgent(agent);
     setIsDrawerOpen(true);
   };
 
-  const center = { lat: -1.2921, lng: 36.8219 }; // Default center (Nairobi)
+  const center = { lat: -1.2921, lng: 36.8219 };
 
   return (
     <Container maxWidth="lg" sx={{ py: 4, pb: 10 }}>
@@ -76,6 +73,7 @@ export default function DiscoveryClient({ initialAgents }: DiscoveryClientProps)
       <AgentSearch
         mode={mode}
         selectedProduce={selectedProduce}
+        produceTypes={produceTypes}
         onSearch={setSearchQuery}
         onToggleMode={setMode}
         onFilterProduce={setSelectedProduce}

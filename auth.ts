@@ -17,7 +17,7 @@ async function backendLogin(username: string, password: string) {
     console.error(`[AUTH] POST ${url} → ${res.status}: ${body.slice(0, 200)}`);
     return null;
   }
-  return res.json() as Promise<{ accessToken: string; userId: string }>;
+  return res.json() as Promise<{ accessToken: string; refreshToken: string; userId: string }>;
 }
 
 async function backendGetUser(userId: string) {
@@ -53,12 +53,13 @@ export const {
     Credentials({
       async authorize(credentials) {
         if (!credentials?.identity || !credentials?.password) return null;
+        console.log(credentials);
+        
 
         const authResult = await backendLogin(
           credentials.identity as string,
           credentials.password as string,
         );
-
         if (!authResult) return null;
 
         const userRecord = await backendGetUser(authResult.userId);
@@ -69,9 +70,10 @@ export const {
             email: userRecord.email,
             role: userRecord.role || 'FARMER',
             accessToken: authResult.accessToken,
+            refreshToken: authResult.refreshToken,
             isComplete: true,
             provider: 'custom',
-          } as any;
+          };
         }
 
         return {
@@ -80,14 +82,17 @@ export const {
           email: credentials.identity as string,
           role: 'FARMER',
           accessToken: authResult.accessToken,
+          refreshToken: authResult.refreshToken,
           isComplete: true,
           provider: 'custom',
-        } as any;
+        };
       },
     }),
   ],
   callbacks: {
     async jwt({ token, user, account, trigger, session }) {
+      console.log([[token], [user], [account], [trigger], [session]]);
+      
       if (trigger === "update" && session) {
         return { ...token, ...session };
       }
@@ -120,6 +125,7 @@ export const {
         return {
           ...token,
           accessToken: (user as any).accessToken,
+          refreshToken: (user as any).refreshToken,
           role: (user as any).role,
           provider: account.provider,
           isComplete: (user as any).isComplete ?? false,
@@ -133,6 +139,7 @@ export const {
         session.user.id = token.sub as string || (token as any).id as string;
         (session.user as any).role = token.role;
         (session.user as any).accessToken = token.accessToken;
+        (session.user as any).refreshToken = token.refreshToken;
         (session.user as any).provider = token.provider;
         (session.user as any).isComplete = token.isComplete;
         (session as any).error = token.error;

@@ -2,11 +2,13 @@ import { Suspense } from 'react';
 import { Box, Typography, Container, Button } from '@mui/material';
 import { ArrowBack } from '@mui/icons-material';
 import Link from 'next/link';
-import WastageHeatmap, { WastageHeatmapSkeleton } from '../components/WastageHeatmap';
-import { getWastageRecords } from './actions';
+import { getDeliveryNotes } from './actions';
+import DeliveryNotesView from './DeliveryNotesView';
 
-export default async function WastagePage() {
-  const recordsPromise = getWastageRecords();
+export default function DeliveryNotesPage() {
+  const dataPromise = getDeliveryNotes()
+    .then(data => ({ data, error: null as string | null }))
+    .catch(err => ({ data: null as any, error: err instanceof Error ? err.message : 'Failed to load delivery notes' }));
 
   return (
     <Container maxWidth="lg" sx={{ py: 4, pb: 10 }}>
@@ -15,14 +17,14 @@ export default async function WastagePage() {
           Dashboard
         </Button>
         <Typography variant="h3" fontWeight="900" gutterBottom sx={{ letterSpacing: -1 }}>
-          Wastage Tracker
+          Delivery Notes
         </Typography>
         <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 'medium' }}>
-          Monitor shrinkage across collection hubs and stores.
+          Create and manage warehouse delivery notes with batch generation.
         </Typography>
       </Box>
-      <Suspense fallback={<WastageHeatmapSkeleton />}>
-        <WastageHeatmap recordsPromise={recordsPromise} />
+      <Suspense fallback={<Typography>Loading...</Typography>}>
+        <DeliveryNotesView dataPromise={dataPromise} />
       </Suspense>
     </Container>
   );

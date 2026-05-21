@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { apiService } from './api-service';
+import { User, UserPermission } from './types';
 
 interface PermissionContextValue {
   permissions: Set<string>;
@@ -24,7 +25,8 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
   const fetchedRef = useRef<string | null>(null);
 
   const fetchPermissions = useCallback(async () => {
-    const userId = (session?.user as any)?.id;
+    const userId = (session?.user as User)?.id;
+    console.log('fetch hit: ', session);
     if (!userId) {
       setPermissions(new Set());
       setLoading(false);
@@ -37,12 +39,17 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
     }
 
     try {
+      console.log('user id: ', userId)
       const userPerms = await apiService.getUserPermissions(userId);
+      console.log('userPerms: ', userPerms);
+      
       const keys = new Set(
         (Array.isArray(userPerms) ? userPerms : [])
-          .filter((up: any) => up?.permissions?.key)
-          .map((up: any) => up.permissions.key),
+          .filter((up: UserPermission) => up?.permissions?.key)
+          .map((up: UserPermission) => up.permissions.key),
       );
+      console.log('permission keys: ', keys);
+      
       setPermissions(keys);
       fetchedRef.current = userId;
     } catch {

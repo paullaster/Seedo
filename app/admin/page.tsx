@@ -1,12 +1,17 @@
-'use client';
+import { Suspense } from 'react';
+import { Box, Typography, Container } from '@mui/material';
+import AdminStats, { AdminStatsSkeleton } from './components/AdminStats';
+import MarketIntelligence, { MarketIntelligenceSkeleton } from './components/MarketIntelligence';
+import WastageHeatmap, { WastageHeatmapSkeleton } from './components/WastageHeatmap';
+import { getMarketRates } from './markets/actions';
+import { getDashboardStats } from './stats/actions';
+import { getWastageRecords } from './wastage/actions';
 
-import React from 'react';
-import { Box, Typography, Container, Stack, Divider } from '@mui/material';
-import AdminStats from './components/AdminStats';
-import WastageHeatmap from './components/WastageHeatmap';
-import MarketIntelligence from './components/MarketIntelligence';
+export default async function AdminDashboard() {
+  const ratesPromise = getMarketRates();
+  const statsPromise = getDashboardStats();
+  const wastagePromise = getWastageRecords();
 
-export default function AdminDashboard() {
   return (
     <Container maxWidth="lg" sx={{ py: 4, pb: 10 }}>
       <Box sx={{ mb: 4 }}>
@@ -18,14 +23,20 @@ export default function AdminDashboard() {
         </Typography>
       </Box>
 
-      <AdminStats />
+      <Suspense fallback={<AdminStatsSkeleton />}>
+        <AdminStats statsPromise={statsPromise} />
+      </Suspense>
 
       <Box sx={{ mt: 6 }}>
-        <MarketIntelligence />
+        <Suspense fallback={<MarketIntelligenceSkeleton />}>
+          <MarketIntelligence ratesPromise={ratesPromise} />
+        </Suspense>
       </Box>
 
       <Box sx={{ mt: 6 }}>
-        <WastageHeatmap />
+        <Suspense fallback={<WastageHeatmapSkeleton />}>
+          <WastageHeatmap recordsPromise={wastagePromise} />
+        </Suspense>
       </Box>
     </Container>
   );
